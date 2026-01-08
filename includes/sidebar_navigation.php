@@ -4,7 +4,15 @@
  * Displays different navigation links based on user role
  */
 
-$baseUrl = str_replace('\\','/', str_replace($_SERVER['DOCUMENT_ROOT'], '', dirname(__DIR__)));
+// Determine the app root based on the includes directory location
+// This file is at: document_root/flordeliz/includes/sidebar_navigation.php
+// We want the app root: /flordeliz/
+$dir = str_replace('\\', '/', dirname(__DIR__));
+$doc_root = str_replace('\\', '/', $_SERVER['DOCUMENT_ROOT']);
+$app_root = '/' . trim(str_replace($doc_root, '', $dir), '/') . '/';
+
+
+
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
@@ -44,9 +52,9 @@ $is_admin = ($role === 'admin');
                 <h1 class="text-xl font-bold text-gray-900">Flor de Liz</h1>
             </div>
 
-            <!-- Right Section: User Info & Logout -->
+            <!-- Right Section: User Info & Profile & Logout -->
             <div class="flex gap-4 items-center">
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2 cursor-pointer hover:opacity-75" onclick="window.location.href='<?php echo $is_staff ? '../staff/profile.php' : '../admin/profile.php'; ?>'">
                     <div class="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
                         <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
@@ -57,7 +65,10 @@ $is_admin = ($role === 'admin');
                         <p class="text-gray-500 text-xs capitalize"><?php echo htmlspecialchars($role); ?></p>
                     </div>
                 </div>
-                <a href="../logout.php" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition text-sm">
+                <a href="<?php echo $is_staff ? '../staff/profile.php' : '../admin/profile.php'; ?>" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm">
+                    Profile
+                </a>
+                <a href="<?php echo $app_root; ?>logout.php" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition text-sm">
                     Logout
                 </a>
             </div>  
@@ -68,7 +79,7 @@ $is_admin = ($role === 'admin');
 <!-- Sidebar Navigation -->
 <div class="flex">
     <!-- Sidebar -->
-    <aside id="sidebar" class="w-64  <?php echo $is_staff ? 'bg-teal-900' : 'bg-amber-900'; ?> text-white min-h-screen p-6 fixed left-0 top-16 bottom-0 transform -translate-x-full transition-all duration-300 ease-in-out md:relative md:translate-x-0 md:top-0 z-40 md:min-h-[calc(100vh-4rem)] overflow-y-auto">
+    <aside id="sidebar" class="w-64 <?php echo $is_staff ? 'text-teal-900' : 'text-amber-900'; ?> min-h-screen p-6 fixed left-0 top-16 bottom-0 transform -translate-x-full transition-all duration-300 ease-in-out md:relative md:translate-x-0 md:top-0 z-40 md:min-h-[calc(100vh-4rem)] overflow-y-auto">
         <!-- Collapse Toggle Button (Desktop Only) -->
         <button id="collapse-toggle" onclick="toggleCollapseSidebar()" class="hidden md:flex absolute top-4 right-6 w-6 h-6 bg-white text-gray-800 rounded-full shadow-lg hover:bg-gray-100 transition items-center justify-center z-50">
             <svg id="collapse-icon" class="w-4 h-4 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -79,7 +90,7 @@ $is_admin = ($role === 'admin');
         <nav class="space-y-2 pt-4">
             <?php if ($is_staff): ?>
                 <!-- Staff Navigation -->
-                <a href="dashboard.php" class="sidebar-link flex items-center px-4 py-2 rounded-lg hover:<?php echo $is_staff ? 'bg-teal-800' : 'bg-amber-800'; ?> transition" title="Dashboard">
+                <a href="<?php echo $app_root; ?>staff/dashboard.php" class="sidebar-link flex items-center px-4 py-2 rounded-lg hover:<?php echo $is_staff ? 'text-teal-800' : 'text-amber-800'; ?> transition" title="Dashboard">
                     <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-3m0 0l7-4 7 4M5 9v10a1 1 0 001 1h12a1 1 0 001-1V9m-9 11l4-2m0 0l4 2m-4-2v2m-6-4h.01M7 20h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v13a2 2 0 002 2z"></path>
                     </svg>
@@ -88,9 +99,9 @@ $is_admin = ($role === 'admin');
                 
                 <div class="my-4 border-t border-teal-700 sidebar-divider"></div>
                 
-                <p class="sidebar-label px-4 py-2 text-xs font-semibold text-teal-300 uppercase transition-opacity duration-300">Operations</p>
+                <p class="sidebar-label px-4 py-2 text-xs font-semibold text-teal-700  uppercase transition-opacity duration-300">Operations</p>
                 
-                <a href="inventory.php" class="sidebar-link flex items-center px-4 py-2 rounded-lg hover:bg-teal-800 transition" title="Inventory">
+                <a href="<?php echo $app_root; ?>staff/inventory.php" class="sidebar-link flex items-center px-4 py-2 rounded-lg hover:text-teal-800 transition" title="Inventory">
                     <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
                     </svg>
@@ -98,7 +109,7 @@ $is_admin = ($role === 'admin');
                 </a>
                 
                 <!-- Orders Dropdown -->
-                <button onclick="toggleOrdersDropdown()" class="orders-toggle w-full sidebar-link flex items-center px-4 py-2 rounded-lg hover:bg-teal-800 transition" title="Orders" style="border:none;background:transparent;text-align:left;">
+                <button type="button" onclick="toggleOrdersDropdown()" class="orders-toggle w-full sidebar-link flex items-center px-4 py-2 rounded-lg hover:text-teal-800 transition" title="Orders" style="border:none;background:transparent;text-align:left;">
                     <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
                     </svg>
@@ -108,28 +119,52 @@ $is_admin = ($role === 'admin');
                     </svg>
                 </button>
                 <div id="orders-submenu" class="hidden space-y-1 ml-2">
-                    <a href="orders.php" class="sidebar-link flex items-center px-4 py-2 rounded-lg hover:bg-teal-700 transition text-sm" title="View Orders">
+                    <a href="<?php echo $app_root; ?>staff/orders.php" class="sidebar-link flex items-center px-4 py-2 rounded-lg hover:text-teal-700 transition text-sm" title="View Orders">
                         <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                         </svg>
                         <span class="sidebar-label ml-2 transition-opacity duration-300">View Orders</span>
                     </a>
-                    <a href="orders/create.php" class="sidebar-link flex items-center px-4 py-2 rounded-lg hover:bg-teal-700 transition text-sm" title="Create Order">
+                    <a href="<?php echo $app_root; ?>staff/orders/create.php" class="sidebar-link flex items-center px-4 py-2 rounded-lg hover:text-teal-700 transition text-sm" title="Create Order">
                         <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
                         </svg>
                         <span class="sidebar-label ml-2 transition-opacity duration-300">Create Order</span>
                     </a>
                 </div>
+                <!-- Sales Dropdown -->
+                <button type="button" onclick="toggleSalesDropdown()" class="sales-toggle w-full sidebar-link flex items-center px-4 py-2 rounded-lg hover:text-teal-800 transition" title="Sales" style="border:none;background:transparent;text-align:left;">
+                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 11V3m0 8l-4-4m4 4l4-4M3 21h18M3 7h18v14H3V7z"></path>
+                    </svg>
+                    <span class="sidebar-label ml-2 transition-opacity duration-300">Sales</span>
+                    <svg id="sales-dropdown-icon" class="w-4 h-4 ml-auto flex-shrink-0 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
+                    </svg>
+                </button>
+                <div id="sales-submenu" class="hidden space-y-1 ml-2">
+                    <a href="<?php echo $app_root; ?>staff/sales.php" class="sidebar-link flex items-center px-4 py-2 rounded-lg hover:text-teal-700 transition text-sm" title="View Sales">
+                        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 17a4 4 0 100-8 4 4 0 000 8zm8-4h-1.5M6.5 13H5"></path>
+                        </svg>
+                        <span class="sidebar-label ml-2 transition-opacity duration-300">View Sales</span>
+                    </a>
+                    <a href="<?php echo $app_root; ?>staff/sales/create.php" class="sidebar-link flex items-center px-4 py-2 rounded-lg hover:text-teal-700 transition text-sm" title="Create Sale">
+                        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                        </svg>
+                        <span class="sidebar-label ml-2 transition-opacity duration-300">Create Sale</span>
+                    </a>
+                </div>
                 
-                <a href="payments.php" class="sidebar-link flex items-center px-4 py-2 rounded-lg hover:bg-teal-800 transition" title="Payments">
+                <a href="<?php echo $app_root; ?>staff/payments.php" class="sidebar-link flex items-center px-4 py-2 rounded-lg hover:text-teal-800 transition" title="Payments">
                     <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
                     <span class="sidebar-label ml-2 transition-opacity duration-300">Payments</span>
                 </a>
                 
-                <a href="clock.php" class="sidebar-link flex items-center px-4 py-2 rounded-lg hover:bg-teal-800 transition" title="Clock In/Out">
+                <a href="<?php echo $app_root; ?>staff/clock.php" class="sidebar-link flex items-center px-4 py-2 rounded-lg hover:text-teal-800 transition" title="Clock In/Out">
                     <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
@@ -138,7 +173,7 @@ $is_admin = ($role === 'admin');
 
             <?php elseif ($is_admin): ?>
                 <!-- Admin Navigation -->
-                <a href="/admin/dashboard.php" class="sidebar-link flex items-center px-4 py-2 rounded-lg hover:bg-amber-800 transition" title="Dashboard">
+                <a href="<?php echo $app_root; ?>admin/dashboard.php" class="sidebar-link flex items-center px-4 py-2 rounded-lg hover:text-amber-800 transition" title="Dashboard">
                     <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-3m0 0l7-4 7 4M5 9v10a1 1 0 001 1h12a1 1 0 001-1V9m-9 11l4-2m0 0l4 2m-4-2v2m-6-4h.01M7 20h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v13a2 2 0 002 2z"></path>
                     </svg>
@@ -147,35 +182,74 @@ $is_admin = ($role === 'admin');
                 
                 <div class="my-4 border-t border-amber-700 sidebar-divider"></div>
                 
-                <p class="sidebar-label px-4 py-2 text-xs font-semibold text-amber-300 uppercase transition-opacity duration-300">Management</p>
+                <p class="sidebar-label px-4 py-2 text-xs font-semibold text-amber-700 uppercase transition-opacity duration-300">Management</p>
                 
-                <a href="/admin/reports.php" class="sidebar-link flex items-center px-4 py-2 rounded-lg hover:bg-amber-800 transition" title="Reports">
+                <a href="<?php echo $app_root; ?>admin/sales_reports.php" class="sidebar-link flex items-center px-4 py-2 rounded-lg hover:text-amber-800 transition" title="Sales Reports">
                     <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3v18h18M7 12l3-3 3 3 5-5"></path>
                     </svg>
-                    <span class="sidebar-label ml-2 transition-opacity duration-300">Reports</span>
+                    <span class="sidebar-label ml-2 transition-opacity duration-300">Sales Reports</span>
                 </a>
                 
-                <a href="/admin/attendance.php" class="sidebar-link flex items-center px-4 py-2 rounded-lg hover:bg-amber-800 transition" title="Attendance">
+                <button type="button" onclick="toggleAttendanceDropdown()" class="attendance-toggle w-full sidebar-link flex items-center px-4 py-2 rounded-lg hover:text-amber-800 transition" title="Attendance" style="border:none;background:transparent;text-align:left;">
                     <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
                     <span class="sidebar-label ml-2 transition-opacity duration-300">Attendance</span>
-                </a>
+                    <svg id="attendance-dropdown-icon" class="w-4 h-4 ml-auto transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </button>
+                <div id="attendance-submenu" class="hidden pl-8 mt-1">
+                    <a href="<?php echo $app_root; ?>admin/attendance.php" class="block px-4 py-2 text-sm text-gray-700 hover:text-amber-800">View All Attendance</a>
+                    <a href="<?php echo $app_root; ?>admin/attendance/view.php" class="block px-4 py-2 text-sm text-gray-700 hover:text-amber-800">Employee Attendance</a>
+                </div>
                 
-                <a href="/admin/payroll.php" class="sidebar-link flex items-center px-4 py-2 rounded-lg hover:bg-amber-800 transition" title="Payroll">
+                <button type="button" onclick="togglePayrollDropdown()" class="payroll-toggle w-full sidebar-link flex items-center px-4 py-2 rounded-lg hover:text-amber-800 transition" title="Payroll" style="border:none;background:transparent;text-align:left;">
                     <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
                     <span class="sidebar-label ml-2 transition-opacity duration-300">Payroll</span>
-                </a>
+                    <svg id="payroll-dropdown-icon" class="w-4 h-4 ml-auto transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </button>
+                <div id="payroll-submenu" class="hidden pl-8 mt-1">
+                    <a href="<?php echo $app_root; ?>admin/payroll.php" class="block px-4 py-2 text-sm text-gray-700 hover:text-amber-800">View Payroll</a>
+                    <a href="<?php echo $app_root; ?>admin/payroll/create.php" class="block px-4 py-2 text-sm text-gray-700 hover:text-amber-800">Create Payroll</a>
+                </div>
                 
-                <a href="/admin/inventory_reports.php" class="sidebar-link flex items-center px-4 py-2 rounded-lg hover:bg-amber-800 transition" title="Inventory Reports">
+                <a href="<?php echo $app_root; ?>admin/inventory_reports.php" class="sidebar-link flex items-center px-4 py-2 rounded-lg hover:text-amber-800 transition" title="Inventory Reports">
                     <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
                     <span class="sidebar-label ml-2 transition-opacity duration-300">Inventory Reports</span>
                 </a>
+
+                <div class="my-4 border-t border-amber-700 sidebar-divider"></div>
+
+                <p class="sidebar-label px-4 py-2 text-xs font-semibold text-amber-700 uppercase transition-opacity duration-300">Staff</p>
+
+                <!-- Staff Management Dropdown -->
+                <button type="button" onclick="toggleStaffDropdown()" class="staff-toggle w-full sidebar-link flex items-center px-4 py-2 rounded-lg hover:text-amber-800 transition" title="Staff Management" style="border:none;background:transparent;text-align:left;">
+                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 12H9m6 0a6 6 0 11-12 0 6 6 0 0112 0z"></path>
+                    </svg>
+                    <span class="sidebar-label ml-2 transition-opacity duration-300">Staff</span>
+                    <svg id="staff-dropdown-icon" class="w-4 h-4 ml-auto flex-shrink-0 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
+                    </svg>
+                </button>
+                <div id="staff-submenu" class="hidden space-y-1 ml-2">
+                    <a href="<?php echo $app_root; ?>admin/staff/add.php" class="sidebar-link flex items-center px-4 py-2 rounded-lg hover:text-amber-700 transition text-sm" title="Add Staff">
+                        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                        </svg>
+                        <span class="sidebar-label ml-2 transition-opacity duration-300">Add Staff</span>
+                    </a>
+                    <a href="<?php echo $app_root; ?>admin/staff/view.php" class="sidebar-link flex items-center px-4 py-2 rounded-lg hover:text-amber-700 transition text-sm" title="View Staff">
+                        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <span class="sidebar-label ml-2 transition-opacity duration-300">View Staff</span>
+                    </a>
+                </div>
             <?php endif; ?>
         </nav>
 
@@ -291,6 +365,32 @@ $is_admin = ($role === 'admin');
     function toggleOrdersDropdown() {
         const submenu = document.getElementById('orders-submenu');
         const icon = document.getElementById('orders-dropdown-icon');
+        submenu.classList.toggle('hidden');
+        icon.classList.toggle('rotate-180');
+    }
+    function toggleSalesDropdown() {
+        const submenu = document.getElementById('sales-submenu');
+        const icon = document.getElementById('sales-dropdown-icon');
+        submenu.classList.toggle('hidden');
+        icon.classList.toggle('rotate-180');
+    }
+
+    function toggleStaffDropdown() {
+        const submenu = document.getElementById('staff-submenu');
+        const icon = document.getElementById('staff-dropdown-icon');
+        submenu.classList.toggle('hidden');
+        icon.classList.toggle('rotate-180');
+    }
+    function toggleAttendanceDropdown() {
+        const submenu = document.getElementById('attendance-submenu');
+        const icon = document.getElementById('attendance-dropdown-icon');
+        if (!submenu) return;
+        submenu.classList.toggle('hidden');
+        if (icon) icon.classList.toggle('rotate-180');
+    }
+    function togglePayrollDropdown() {
+        const submenu = document.getElementById('payroll-submenu');
+        const icon = document.getElementById('payroll-dropdown-icon');
         submenu.classList.toggle('hidden');
         icon.classList.toggle('rotate-180');
     }

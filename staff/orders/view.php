@@ -10,6 +10,9 @@ if (empty($_SESSION['is_logged_in']) || $_SESSION['role'] !== 'staff') {
 }
 
 $order_id = $_GET['id'] ?? null;
+$is_edit_mode = isset($_GET['edit']) && $_GET['edit'] == 1;
+$message = '';
+$error = '';
 
 if (!$order_id) {
     header('Location: ../orders.php');
@@ -17,6 +20,62 @@ if (!$order_id) {
 }
 
 $conn = require_once __DIR__ . '/../../config/database.php';
+
+// Handle form submission for updates
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $status = $_POST['status'] ?? '';
+    $delivery_date = $_POST['delivery_date'] ?? '';
+    $delivery_address = $_POST['delivery_address'] ?? '';
+    $notes = $_POST['notes'] ?? '';
+    
+    // Update order
+    $stmt = $conn->prepare('UPDATE orders SET status = ?, delivery_date = ?, delivery_address = ?, notes = ? WHERE id = ?');
+    $stmt->bind_param('ssssi', $status, $delivery_date, $delivery_address, $notes, $order_id);
+    
+    if ($stmt->execute()) {
+        // Handle item updates
+        if (isset($_POST['item_id']) && is_array($_POST['item_id'])) {
+            $all_items_updated = true;
+            foreach ($_POST['item_id'] as $index => $item_id) {
+                $quantity = $_POST['quantity'][$index] ?? 0;
+                $unit_price = $_POST['unit_price'][$index] ?? 0;
+                
+                if ($quantity > 0) {
+                    $update_item = $conn->prepare('UPDATE order_items SET quantity = ?, unit_price = ? WHERE id = ?');
+                    $update_item->bind_param('idi', $quantity, $unit_price, $item_id);
+                    if (!$update_item->execute()) {
+                        $all_items_updated = false;
+                    }
+                    $update_item->close();
+                }
+            }
+            
+            // Update total amount
+            $total = 0;
+            foreach ($_POST['item_id'] as $index => $item_id) {
+                $total += ($_POST['quantity'][$index] ?? 0) * ($_POST['unit_price'][$index] ?? 0);
+            }
+            
+            $update_total = $conn->prepare('UPDATE orders SET total_amount = ? WHERE id = ?');
+            $update_total->bind_param('di', $total, $order_id);
+            $update_total->execute();
+            $update_total->close();
+        }
+        
+        $stmt->close();
+        $conn->close();
+        // Redirect to view page without edit mode after successful update
+        header('Location: view.php?id=' . $order_id . '&success=1');
+        exit();
+    } else {
+        $error = 'Failed to update order. Please try again.';
+    }
+    $stmt->close();
+}
+
+// Handle success message from redirect
+$success = isset($_GET['success']) && $_GET['success'] == 1;
+$message = $success ? 'Order updated successfully!' : '';
 
 // Get order details
 $stmt = $conn->prepare('SELECT o.*, c.name as customer_name, c.phone as customer_phone, c.category as customer_category 
@@ -77,30 +136,53 @@ $remaining = $order['total_amount'] - $total_paid;
     <div class="absolute w-full -ml-2 top-12">
         <div id="main-content" class="flex-1 px-4 sm:px-6 lg:px-8 py-12">
             <div class="max-w-4xl mx-auto">
-                <div class="flex justify-between items-center mb-8">
-                    <div>
-                        <h2 class="text-4xl font-bold text-gray-900">Order <?php echo htmlspecialchars($order['order_number']); ?></h2>
-                        <p class="text-gray-600 mt-2">Order Date: <?php echo date('M d, Y', strtotime($order['order_date'])); ?></p>
+                    <div class="flex justify-between items-center mb-8">
+                        <div>
+                            <h2 class="text-4xl font-bold text-gray-900">Order <?php echo htmlspecialchars($order['order_number']); ?></h2>
+                            <p class="text-gray-600 mt-2">Order Date: <?php echo date('M d, Y', strtotime($order['order_date'])); ?></p>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <div>
+                                <?php 
+                                    $status_colors = [
+                                        'pending' => 'bg-yellow-100 text-yellow-800',
+                                        'in_progress' => 'bg-blue-100 text-blue-800',
+                                        'completed' => 'bg-green-100 text-green-800',
+                                        'cancelled' => 'bg-red-100 text-red-800'
+                                    ];
+                                    $color = $status_colors[$order['status']] ?? 'bg-gray-100 text-gray-800';
+                                ?>
+                                <span class="px-4 py-2 rounded-full text-sm font-bold <?php echo $color; ?>">
+                                    <?php echo ucwords(str_replace('_', ' ', $order['status'])); ?>
+                                </span>
+                            </div>
+                            <?php if (!$is_edit_mode): ?>
+                                <a href="?id=<?php echo $order_id; ?>&edit=1" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold text-sm">
+                                    Edit Order
+                                </a>
+                            <?php endif; ?>
+                        </div>
                     </div>
-                    <div>
-                        <?php 
-                            $status_colors = [
-                                'pending' => 'bg-yellow-100 text-yellow-800',
-                                'in_progress' => 'bg-blue-100 text-blue-800',
-                                'completed' => 'bg-green-100 text-green-800',
-                                'cancelled' => 'bg-red-100 text-red-800'
-                            ];
-                            $color = $status_colors[$order['status']] ?? 'bg-gray-100 text-gray-800';
-                        ?>
-                        <span class="px-4 py-2 rounded-full text-sm font-bold <?php echo $color; ?>">
-                            <?php echo ucwords(str_replace('_', ' ', $order['status'])); ?>
-                        </span>
-                    </div>
-                </div>
 
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     <!-- Main Content -->
                     <div class="lg:col-span-2">
+                        <?php if ($message): ?>
+                            <div class="bg-green-50 border border-green-200 rounded-xl p-4 mb-6">
+                                <p class="text-green-800 font-semibold"><?php echo htmlspecialchars($message); ?></p>
+                            </div>
+                        <?php endif; ?>
+                        
+                        <?php if ($error): ?>
+                            <div class="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
+                                <p class="text-red-800 font-semibold"><?php echo htmlspecialchars($error); ?></p>
+                            </div>
+                        <?php endif; ?>
+
+                        <?php if ($is_edit_mode): ?>
+                            <form method="POST" id="edit-form" class="space-y-8">
+                        <?php endif; ?>
+
                         <!-- Customer Information -->
                         <div class="bg-white rounded-xl shadow-md p-8 mb-8">
                             <h3 class="text-lg font-bold text-gray-900 mb-6">Customer Information</h3>
@@ -119,9 +201,33 @@ $remaining = $order['total_amount'] - $total_paid;
                                 </div>
                                 <div>
                                     <p class="text-sm font-semibold text-gray-600">Delivery Date</p>
-                                    <p class="text-gray-900 mt-1"><?php echo date('M d, Y', strtotime($order['delivery_date'])); ?></p>
+                                    <?php if ($is_edit_mode): ?>
+                                        <input type="date" name="delivery_date" value="<?php echo $order['delivery_date']; ?>" class="mt-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 w-full">
+                                    <?php else: ?>
+                                        <p class="text-gray-900 mt-1"><?php echo date('M d, Y', strtotime($order['delivery_date'])); ?></p>
+                                    <?php endif; ?>
                                 </div>
                             </div>
+                            <div class="mt-6 pt-6 border-t">
+                                <p class="text-sm font-semibold text-gray-600 mb-2">Delivery Address</p>
+                                <?php if ($is_edit_mode): ?>
+                                    <textarea name="delivery_address" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500" placeholder="Enter delivery address..."><?php echo htmlspecialchars($order['delivery_address'] ?? ''); ?></textarea>
+                                <?php else: ?>
+                                    <p class="text-gray-900 mt-1"><?php echo htmlspecialchars($order['delivery_address'] ?? '--'); ?></p>
+                                <?php endif; ?>
+                            </div>
+                            
+                            <?php if ($is_edit_mode): ?>
+                                <div class="mt-6 pt-6 border-t">
+                                    <label class="block text-sm font-semibold text-gray-600 mb-2">Status</label>
+                                    <select name="status" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500">
+                                        <option value="pending" <?php echo $order['status'] === 'pending' ? 'selected' : ''; ?>>Pending</option>
+                                        <option value="in_progress" <?php echo $order['status'] === 'in_progress' ? 'selected' : ''; ?>>In Progress</option>
+                                        <option value="completed" <?php echo $order['status'] === 'completed' ? 'selected' : ''; ?>>Completed</option>
+                                        <option value="cancelled" <?php echo $order['status'] === 'cancelled' ? 'selected' : ''; ?>>Cancelled</option>
+                                    </select>
+                                </div>
+                            <?php endif; ?>
                         </div>
 
                         <!-- Order Items -->
@@ -137,15 +243,32 @@ $remaining = $order['total_amount'] - $total_paid;
                                             <th class="px-6 py-3 text-right text-sm font-semibold text-gray-700">Quantity</th>
                                             <th class="px-6 py-3 text-right text-sm font-semibold text-gray-700">Unit Price</th>
                                             <th class="px-6 py-3 text-right text-sm font-semibold text-gray-700">Subtotal</th>
+                                            <?php if ($is_edit_mode): ?>
+                                                <th class="px-6 py-3 text-center text-sm font-semibold text-gray-700">Actions</th>
+                                            <?php endif; ?>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <?php foreach ($items as $item): ?>
+                                        <?php foreach ($items as $index => $item): ?>
                                             <tr class="border-b border-gray-200">
                                                 <td class="px-6 py-4 text-gray-900"><?php echo htmlspecialchars($item['product_name'] ?? 'Product #' . $item['product_id']); ?></td>
-                                                <td class="px-6 py-4 text-right text-gray-900"><?php echo $item['quantity']; ?></td>
-                                                <td class="px-6 py-4 text-right text-gray-900">₱<?php echo number_format($item['unit_price'], 2); ?></td>
-                                                <td class="px-6 py-4 text-right font-semibold text-gray-900">₱<?php echo number_format($item['quantity'] * $item['unit_price'], 2); ?></td>
+                                                <?php if ($is_edit_mode): ?>
+                                                    <td class="px-6 py-4 text-right">
+                                                        <input type="hidden" name="item_id[]" value="<?php echo $item['id']; ?>">
+                                                        <input type="number" name="quantity[]" value="<?php echo $item['quantity']; ?>" min="0" class="w-20 px-2 py-1 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500">
+                                                    </td>
+                                                    <td class="px-6 py-4 text-right">
+                                                        <input type="number" name="unit_price[]" value="<?php echo $item['unit_price']; ?>" step="0.01" min="0" class="w-24 px-2 py-1 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500">
+                                                    </td>
+                                                    <td class="px-6 py-4 text-right font-semibold text-gray-900">₱<span class="item-subtotal"><?php echo number_format($item['quantity'] * $item['unit_price'], 2); ?></span></td>
+                                                    <td class="px-6 py-4 text-center">
+                                                        <button type="button" onclick="removeItem(this)" class="text-red-600 hover:text-red-800 font-semibold text-sm">Remove</button>
+                                                    </td>
+                                                <?php else: ?>
+                                                    <td class="px-6 py-4 text-right text-gray-900"><?php echo $item['quantity']; ?></td>
+                                                    <td class="px-6 py-4 text-right text-gray-900">₱<?php echo number_format($item['unit_price'], 2); ?></td>
+                                                    <td class="px-6 py-4 text-right font-semibold text-gray-900">₱<?php echo number_format($item['quantity'] * $item['unit_price'], 2); ?></td>
+                                                <?php endif; ?>
                                             </tr>
                                         <?php endforeach; ?>
                                     </tbody>
@@ -177,11 +300,19 @@ $remaining = $order['total_amount'] - $total_paid;
                         </div>
 
                         <!-- Notes -->
-                        <?php if ($order['notes']): ?>
+                        <?php if ($is_edit_mode || $order['notes']): ?>
                             <div class="bg-blue-50 border border-blue-200 rounded-xl p-6">
                                 <h3 class="font-semibold text-blue-900 mb-2">Notes</h3>
-                                <p class="text-blue-800"><?php echo htmlspecialchars($order['notes']); ?></p>
+                                <?php if ($is_edit_mode): ?>
+                                    <textarea name="notes" rows="4" class="w-full px-3 py-2 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Add notes about this order..."><?php echo htmlspecialchars($order['notes'] ?? ''); ?></textarea>
+                                <?php else: ?>
+                                    <p class="text-blue-800"><?php echo htmlspecialchars($order['notes']); ?></p>
+                                <?php endif; ?>
                             </div>
+                        <?php endif; ?>
+                        
+                        <?php if ($is_edit_mode): ?>
+                            </form>
                         <?php endif; ?>
                     </div>
 
@@ -220,7 +351,12 @@ $remaining = $order['total_amount'] - $total_paid;
                             <?php endif; ?>
 
                             <div class="flex gap-2">
-                                <a href="../orders.php" class="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition text-center font-semibold">Back</a>
+                                <?php if ($is_edit_mode): ?>
+                                    <button type="submit" form="edit-form" class="flex-1 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition text-center font-semibold">Save Changes</button>
+                                    <a href="?id=<?php echo $order_id; ?>" class="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition text-center font-semibold">Cancel</a>
+                                <?php else: ?>
+                                    <a href="../orders.php" class="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition text-center font-semibold">Back</a>
+                                <?php endif; ?>
                             </div>
                         </div>
                     </div>
@@ -230,3 +366,36 @@ $remaining = $order['total_amount'] - $total_paid;
     </div>
 </body>
 </html>
+
+<script>
+    function removeItem(button) {
+        const row = button.closest('tr');
+        const quantityInput = row.querySelector('input[name="quantity[]"]');
+        const priceInput = row.querySelector('input[name="unit_price[]"]');
+        
+        // Set quantity to 0 and disable inputs
+        quantityInput.value = 0;
+        quantityInput.disabled = true;
+        priceInput.disabled = true;
+        
+        // Hide the row or mark as removed
+        row.style.opacity = '0.5';
+        button.textContent = 'Removed';
+        button.disabled = true;
+        button.className = 'text-gray-400 cursor-not-allowed';
+    }
+    
+    // Update subtotal when quantity or price changes
+    document.addEventListener('change', function(e) {
+        if (e.target.name === 'quantity[]' || e.target.name === 'unit_price[]') {
+            const row = e.target.closest('tr');
+            const quantityInput = row.querySelector('input[name="quantity[]"]');
+            const priceInput = row.querySelector('input[name="unit_price[]"]');
+            const subtotal = quantityInput.value * priceInput.value;
+            const subtotalSpan = row.querySelector('.item-subtotal');
+            if (subtotalSpan) {
+                subtotalSpan.textContent = parseFloat(subtotal).toFixed(2);
+            }
+        }
+    });
+</script>

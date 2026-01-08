@@ -21,12 +21,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $_SERVER['HTTP_X_REQUESTED_WITH'] =
     // enable mysqli exceptions to catch DB errors and return JSON
     mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
     $conn = require_once __DIR__ . '/../../config/database.php';
+    require_once __DIR__ . '/../../config/sms.php';
     
     $customer_id = $_POST['customer_id'] ?? null;
     $customer_name = $_POST['customer_name'] ?? '';
     $customer_phone = $_POST['customer_phone'] ?? '';
     $customer_category = $_POST['customer_category'] ?? '';
     $delivery_date = $_POST['delivery_date'] ?? null;
+    $delivery_address = $_POST['delivery_address'] ?? '';
     $downpayment = floatval($_POST['downpayment'] ?? 0);
     $notes = $_POST['notes'] ?? '';
     
@@ -60,9 +62,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $_SERVER['HTTP_X_REQUESTED_WITH'] =
         
         // Create order (database schema does not include downpayment fields)
         $status = 'pending';
-        $stmt = $conn->prepare('INSERT INTO orders (order_number, customer_id, order_date, delivery_date, status, total_amount, notes) VALUES (?, ?, NOW(), ?, ?, ?, ?)');
-        // types: s=order_number, i=customer_id, s=delivery_date, s=status, d=total_amount, s=notes
-        $stmt->bind_param('sissds', $order_number, $customer_id, $delivery_date, $status, $total_amount, $notes);
+        $stmt = $conn->prepare('INSERT INTO orders (order_number, customer_id, order_date, delivery_date, delivery_address, status, total_amount, notes) VALUES (?, ?, NOW(), ?, ?, ?, ?, ?)');
+        // types: s=order_number, i=customer_id, s=delivery_date, s=delivery_address, s=status, d=total_amount, s=notes
+        $stmt->bind_param('sisssds', $order_number, $customer_id, $delivery_date, $delivery_address, $status, $total_amount, $notes);
         $stmt->execute();
         $order_id = $conn->insert_id;
         $stmt->close();
@@ -94,12 +96,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $_SERVER['HTTP_X_REQUESTED_WITH'] =
         
         $conn->commit();
         $conn->close();
+        
+        // Send SMS confirmation to customer (after database commit)
+        $sms_result = sendOrderConfirmationSMS($customer_name, $customer_phone, $order_number, $delivery_date, $total_amount);
 
         echo json_encode([
             'success' => true,
-            'message' => 'Order created successfully',
+            'message' => 'Order created successfully. ' . ($sms_result['success'] ? 'Confirmation SMS sent to customer.' : 'Note: SMS delivery may have encountered an issue.'),
             'order_number' => $order_number,
-            'order_id' => $order_id
+            'order_id' => $order_id,
+            'sms_sent' => $sms_result['success']
         ]);
     } catch (Exception $e) {
         // If mysqli_report enabled, errors throw exceptions; rollback and return JSON error
@@ -230,6 +236,11 @@ $conn->close();
                                     <div class="mb-4">
                                         <label class="block text-sm font-semibold text-gray-700 mb-2">Delivery Date *</label>
                                         <input type="date" id="deliveryDate" name="delivery_date" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500" required>
+                                    </div>
+
+                                    <div class="mb-4">
+                                        <label class="block text-sm font-semibold text-gray-700 mb-2">Delivery Address</label>
+                                        <textarea id="deliveryAddress" name="delivery_address" placeholder="Enter delivery address..." rows="2" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"></textarea>
                                     </div>
 
                                     <div class="mb-4">

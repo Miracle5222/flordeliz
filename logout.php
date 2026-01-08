@@ -1,8 +1,14 @@
 <?php 
 session_start();
-    session_unset();
-    session_destroy();
-    header('Location: index.php');
-    exit();
+$role = $_SESSION['role'] ?? '';
+session_unset();
+session_destroy();
 
+// Redirect to appropriate login page based on role
+if ($role === 'admin') {
+    header('Location: login_admin.php');
+} else {
+    header('Location: login_staff.php');
+}
+exit();
 ?>

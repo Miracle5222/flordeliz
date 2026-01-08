@@ -90,9 +90,25 @@ if (method_exists($stmt, 'get_result')) {
 $response = ['success' => false, 'errors' => ['The username or password you entered is incorrect. Please try again.']];
 
 if ($user && isset($user['password'])) {
-	// Compare MD5 hashes (note: MD5 is not secure for production)
-	if ($user['password'] === md5($password)) {
-		// success
+	$stored_hash = $user['password'];
+	$authenticated = false;
+
+	// Prefer secure verification
+	if (password_verify($password, $stored_hash)) {
+		$authenticated = true;
+	} elseif ($stored_hash === md5($password)) {
+		// Legacy MD5 matched — migrate to password_hash()
+		$new_hash = password_hash($password, PASSWORD_DEFAULT);
+		$mstmt = $conn->prepare('UPDATE users SET password = ? WHERE id = ?');
+		if ($mstmt) {
+			$mstmt->bind_param('si', $new_hash, $user['id']);
+			$mstmt->execute();
+			$mstmt->close();
+		}
+		$authenticated = true;
+	}
+
+	if ($authenticated) {
 		$_SESSION['user_id'] = $user['id'];
 		$_SESSION['username'] = $user['username'];
 		$_SESSION['role'] = $user['role'];

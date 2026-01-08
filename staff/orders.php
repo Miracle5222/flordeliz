@@ -175,6 +175,7 @@ $conn->close();
                                         </td>
                                         <td class="px-6 py-4">
                                             <button onclick="viewOrder(<?php echo $order['id']; ?>)" class="text-teal-600 hover:text-teal-800 font-semibold text-sm">View</button>
+                                            <button onclick="editOrder(<?php echo $order['id']; ?>)" class="text-blue-600 hover:text-blue-800 font-semibold text-sm ml-3">Edit</button>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
@@ -206,6 +207,10 @@ $conn->close();
     <script>
         function viewOrder(orderId) {
             window.location.href = `orders/view.php?id=${orderId}`;
+        }
+        
+        function editOrder(orderId) {
+            window.location.href = `orders/view.php?id=${orderId}&edit=1`;
         }
     </script>
 </body>
