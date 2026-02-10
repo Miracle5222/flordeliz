@@ -4,3 +4,91 @@ Your order #ORD-20260108135941 has been confirmed!
 
 Order Total: ₱350.00
 Delive...
+[2026-01-08 14:20:44] [ERROR] TO: +639454739384 | ERROR: [HTTP 401] Unable to create record: Authenticate
+[2026-01-08 14:23:51] [ERROR] TO: +639454739384 | ERROR: [HTTP 400] Unable to create record: The number +63945473XXXX is unverified. Trial accounts cannot send messages to unverified numbers; verify +63945473XXXX at twilio.com/user/account/phone-numbers/verified, or purchase a Twilio number to send messages to unverified numbers
+[2026-01-08 14:28:19] [ERROR] TO: +639454739384 | ERROR: [HTTP 400] Unable to create record: The number +63945473XXXX is unverified. Trial accounts cannot send messages to unverified numbers; verify +63945473XXXX at twilio.com/user/account/phone-numbers/verified, or purchase a Twilio number to send messages to unverified numbers
+[2026-01-08 15:06:23] [SENT] TO: +639454739384 | HTTP: 403 | RESPONSE: Your account has not yet been approved for sending messages. Please either top-up your account or wait for your account to be approved. If your account has not been approved within 2 business days, please email support@semaphore.co
+[2026-01-08 15:22:03] [SMS FAILED] TO: +639454739384 | HTTP: 403
+[2026-01-08 15:24:47] [SMS FAILED] TO: +639454739384 | HTTP: 403
+[2026-01-08 15:56:35] [SMS FAILED] TO: +639454739384 | HTTP: 403
+[2026-01-08 16:01:33] [SMS FAILED] TO: +639454739384 | HTTP: 403
+[2026-01-08 16:01:33] [EMAIL FAILED] TO: roneilbansas5222@gmail.com | Both PHPMailer and mail() failed
+[2026-01-08 16:01:50] [SMS FAILED] TO: +639454739384 | HTTP: 403
+[2026-01-08 16:01:50] [EMAIL FAILED] TO: roneilbansas5222@gmail.com | Both PHPMailer and mail() failed
+[2026-01-08 16:03:15] [SMS FAILED] TO: +639454739386 | HTTP: 403
+[2026-01-08 16:03:15] [EMAIL FAILED] TO: donghinban0928@gmail.com | Both PHPMailer and mail() failed
+[2026-01-08 16:04:00] [EMAIL FAILED] TO: test@example.com | Both PHPMailer and mail() failed
+[2026-01-08 16:05:37] [SMS FAILED] TO: +639454739384 | HTTP: 403
+[2026-01-08 16:05:37] [EMAIL SENT] TO: roneilbansas5222@gmail.com | SUBJECT: Message from Flor de Liz
+[2026-01-08 16:05:42] [FALLBACK TO EMAIL] PHONE: +639454739384 | EMAIL: roneilbansas5222@gmail.com
+[2026-01-12 13:11:05] [SMS FAILED] TO: +639454739384 | HTTP: 403
+[2026-01-12 13:11:05] [EMAIL SENT] TO: roneilbansas5222@gmail.com | SUBJECT: Message from Flor de Liz
+[2026-01-12 13:11:10] [FALLBACK TO EMAIL] PHONE: +639454739384 | EMAIL: roneilbansas5222@gmail.com
+[2026-01-26 21:16:29] [SMS FAILED] TO: +639661337494 | HTTP: 403
+[2026-01-26 21:16:29] [EMAIL SENT] TO: roneilbansas5222@gmail.com | SUBJECT: Message from Flor de Liz
+[2026-01-26 21:16:34] [FALLBACK TO EMAIL] PHONE: +639661337494 | EMAIL: roneilbansas5222@gmail.com
+[2026-01-26 21:16:35] [SMS FAILED] TO: +639661337494 | HTTP: 403
+[2026-01-26 21:16:35] [EMAIL SENT] TO: roneilbansas5222@gmail.com | SUBJECT: Message from Flor de Liz
+[2026-01-26 21:16:39] [FALLBACK TO EMAIL] PHONE: +639661337494 | EMAIL: roneilbansas5222@gmail.com
+[2026-01-26 21:27:27] [SMS FAILED] TO: +639454739384 | HTTP: 403
+[2026-01-26 21:27:27] [EMAIL SENT] TO: roneilbansas5222@gmail.com | SUBJECT: Message from Flor de Liz
+[2026-01-26 21:27:32] [FALLBACK TO EMAIL] PHONE: +639454739384 | EMAIL: roneilbansas5222@gmail.com
+[2026-01-26 21:31:59] [SMS FAILED] TO: +639454739384 | HTTP: 403
+[2026-01-26 21:31:59] [EMAIL SENT] TO: roneilbansas5222@gmail.com | SUBJECT: Message from Flor de Liz
+[2026-01-26 21:32:04] [FALLBACK TO EMAIL] PHONE: +639454739384 | EMAIL: roneilbansas5222@gmail.com
+[2026-01-26 21:37:34] [SMS FAILED] TO: +639454739384 | HTTP: 403
+[2026-01-26 21:37:34] [EMAIL SENT] TO: roneilbansas5222@gmail.com | SUBJECT: Message from Flor de Liz
+[2026-01-26 21:37:38] [FALLBACK TO EMAIL] PHONE: +639454739384 | EMAIL: roneilbansas5222@gmail.com
+[2026-01-26 21:37:38] [EMAIL SENT] TO: roneilbansas5222@gmail.com | SUBJECT: Order Confirmation - ORD-20260126213733
+[2026-01-26 21:38:57] [SMS FAILED] TO: +639661337494 | HTTP: 403
+[2026-01-26 21:38:57] [EMAIL SENT] TO: roneilbansas5222@gmail.com | SUBJECT: Message from Flor de Liz
+[2026-01-26 21:39:01] [FALLBACK TO EMAIL] PHONE: +639661337494 | EMAIL: roneilbansas5222@gmail.com
+[2026-01-26 21:39:01] [EMAIL SENT] TO: roneilbansas5222@gmail.com | SUBJECT: Order Confirmation - ORD-20260126213856
+[2026-01-26 21:43:49] [SMS FAILED] TO: +639454739384 | HTTP: 403
+[2026-01-26 21:43:49] [EMAIL SENT] TO: rocasjose77@gmail.com | SUBJECT: Message from Flor de Liz
+[2026-01-26 21:43:54] [FALLBACK TO EMAIL] PHONE: +639454739384 | EMAIL: rocasjose77@gmail.com
+[2026-01-26 21:43:54] [EMAIL SENT] TO: rocasjose77@gmail.com | SUBJECT: Order Confirmation - ORD-20260126214348
+[2026-01-26 21:45:11] [SMS FAILED] TO: +639454739386 | HTTP: 403
+[2026-01-26 21:45:11] [EMAIL SENT] TO: donghinban0928@gmail.com | SUBJECT: Message from Flor de Liz
+[2026-01-26 21:45:17] [FALLBACK TO EMAIL] PHONE: +639454739386 | EMAIL: donghinban0928@gmail.com
+[2026-01-26 21:45:17] [EMAIL SENT] TO: donghinban0928@gmail.com | SUBJECT: Order Confirmation - ORD-20260126214510
+[2026-01-26 21:51:26] [SMS FAILED] TO: +639454739386 | HTTP: 403
+[2026-01-26 21:51:26] [EMAIL SENT] TO: donghinban0928@gmail.com | SUBJECT: Message from Flor de Liz
+[2026-01-26 21:51:31] [FALLBACK TO EMAIL] PHONE: +639454739386 | EMAIL: donghinban0928@gmail.com
+[2026-01-26 21:51:31] [EMAIL SENT] TO: donghinban0928@gmail.com | SUBJECT: Order Confirmation - ORD-20260126215125
+[2026-01-26 21:54:36] [SMS FAILED] TO: +639454739384 | HTTP: 403
+[2026-01-26 21:54:36] [EMAIL SENT] TO: roneilbansas5222@gmail.com | SUBJECT: Message from Flor de Liz
+[2026-01-26 21:54:41] [FALLBACK TO EMAIL] PHONE: +639454739384 | EMAIL: roneilbansas5222@gmail.com
+[2026-01-26 21:54:41] [EMAIL SENT] TO: roneilbansas5222@gmail.com | SUBJECT: Order Confirmation - ORD-20260126215435
+[2026-01-26 21:58:42] [SMS FAILED] TO: +639454739384 | HTTP: 403
+[2026-01-26 21:58:42] [EMAIL SENT] TO: rocasjose77@gmail.com | SUBJECT: Message from Flor de Liz
+[2026-01-26 21:58:47] [FALLBACK TO EMAIL] PHONE: +639454739384 | EMAIL: rocasjose77@gmail.com
+[2026-01-26 21:58:47] [EMAIL SENT] TO: rocasjose77@gmail.com | SUBJECT: Order Confirmation - ORD-20260126215841
+[2026-01-26 22:04:35] [SMS FAILED] TO: +639454739384 | HTTP: 403
+[2026-01-26 22:04:35] [EMAIL SENT] TO: roneilbansas5222@gmail.com | SUBJECT: Message from Flor de Liz
+[2026-01-26 22:04:40] [FALLBACK TO EMAIL] PHONE: +639454739384 | EMAIL: roneilbansas5222@gmail.com
+[2026-01-26 22:04:40] [EMAIL SENT] TO: roneilbansas5222@gmail.com | SUBJECT: Order Confirmation - ORD-20260126220434
+[2026-01-26 22:12:18] [SMS FAILED] TO: +639454739384 | HTTP: 403
+[2026-01-26 22:12:18] [EMAIL SENT] TO: roneilbansas5222@gmail.com | SUBJECT: Message from Flor de Liz
+[2026-01-26 22:12:24] [FALLBACK TO EMAIL] PHONE: +639454739384 | EMAIL: roneilbansas5222@gmail.com
+[2026-01-26 22:12:24] [EMAIL SENT] TO: roneilbansas5222@gmail.com | SUBJECT: Order Confirmation - ORD-20260126221217
+[2026-01-26 22:29:05] [SMS FAILED] TO: +639454739384 | HTTP: 403
+[2026-01-26 22:29:05] [EMAIL SENT] TO: roneilbansas5222@gmail.com | SUBJECT: Message from Flor de Liz
+[2026-01-26 22:29:11] [FALLBACK TO EMAIL] PHONE: +639454739384 | EMAIL: roneilbansas5222@gmail.com
+[2026-01-26 22:29:11] [EMAIL SENT] TO: roneilbansas5222@gmail.com | SUBJECT: Order Confirmation - ORD-20260126222904
+[2026-01-26 22:34:37] [SMS FAILED] TO: +639454739384 | HTTP: 403
+[2026-01-26 22:34:37] [EMAIL SENT] TO: roneilbansas5222@gmail.com | SUBJECT: Message from Flor de Liz
+[2026-01-26 22:34:41] [FALLBACK TO EMAIL] PHONE: +639454739384 | EMAIL: roneilbansas5222@gmail.com
+[2026-01-26 22:34:41] [EMAIL SENT] TO: roneilbansas5222@gmail.com | SUBJECT: Order Confirmation - ORD-20260126223436
+[2026-02-03 21:09:31] [SMS FAILED] TO: +639454739384 | HTTP: 403
+[2026-02-03 21:09:31] [EMAIL SENT] TO: roneilbansas5222@gmail.com | SUBJECT: Message from Flor de Liz
+[2026-02-03 21:09:37] [FALLBACK TO EMAIL] PHONE: +639454739384 | EMAIL: roneilbansas5222@gmail.com
+[2026-02-03 21:09:37] [EMAIL SENT] TO: roneilbansas5222@gmail.com | SUBJECT: Order Confirmation - ORD-20260203210930
+[2026-02-03 21:09:42] [SMS FAILED] TO: +639454739384 | HTTP: 403
+[2026-02-03 21:09:42] [EMAIL SENT] TO: roneilbansas5222@gmail.com | SUBJECT: Message from Flor de Liz
+[2026-02-03 21:09:46] [FALLBACK TO EMAIL] PHONE: +639454739384 | EMAIL: roneilbansas5222@gmail.com
+[2026-02-03 21:09:46] [EMAIL SENT] TO: roneilbansas5222@gmail.com | SUBJECT: Order Confirmation - ORD-20260203210941
+[2026-02-03 21:37:39] [SMS FAILED] TO: +639454739384 | HTTP: 403
+[2026-02-03 21:37:39] [EMAIL SENT] TO: roneilbansas5222@gmail.com | SUBJECT: Message from Flor de Liz
+[2026-02-03 21:37:44] [FALLBACK TO EMAIL] PHONE: +639454739384 | EMAIL: roneilbansas5222@gmail.com
+[2026-02-03 21:37:44] [EMAIL SENT] TO: roneilbansas5222@gmail.com | SUBJECT: Order Confirmation - ORD-20260203213738

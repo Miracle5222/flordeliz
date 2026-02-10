@@ -17,6 +17,22 @@ while ($row = $employees_result->fetch_assoc()) {
 $message = '';
 $error = '';
 
+// Function to count working days (excluding weekends)
+function countWorkingDays($start_date, $end_date) {
+    $start = strtotime($start_date);
+    $end = strtotime($end_date);
+    $working_days = 0;
+    
+    for ($current = $start; $current <= $end; $current = strtotime('+1 day', $current)) {
+        $day_of_week = date('w', $current); // 0 = Sunday, 6 = Saturday
+        if ($day_of_week != 0 && $day_of_week != 6) {
+            $working_days++;
+        }
+    }
+    
+    return $working_days;
+}
+
 if ($_POST) {
     try {
         $employee_id = $_POST['employee_id'] ?? '';
@@ -44,29 +60,14 @@ if ($_POST) {
             throw new Exception('Employee not found.');
         }
 
-        // Calculate days worked and overtime from attendance records
-        $att_stmt = $conn->prepare("
-            SELECT 
-                COUNT(DISTINCT attendance_date) as days_worked,
-                SUM(hours_worked) as total_hours,
-                SUM(overtime_hours) as overtime_hours
-            FROM attendance 
-            WHERE employee_id = ? 
-            AND attendance_date BETWEEN ? AND ?
-        ");
-        if (!$att_stmt) throw new Exception('Prepare failed: ' . $conn->error);
-        
-        $att_stmt->bind_param('iss', $employee_id, $pay_period_start, $pay_period_end);
-        if (!$att_stmt->execute()) throw new Exception('Attendance query failed: ' . $att_stmt->error);
-        
-        $att_result = $att_stmt->get_result();
-        $attendance = $att_result->fetch_assoc();
-        $att_stmt->close();
+        // Read manual inputs for days worked and overtime hours
+        $days_worked = isset($_POST['days_worked']) ? (int) $_POST['days_worked'] : 0;
+        $overtime_hours = isset($_POST['overtime_hours']) ? (float) $_POST['overtime_hours'] : 0.0;
 
-        $days_worked = $attendance['days_worked'] ?? 0;
-        $overtime_hours = $attendance['overtime_hours'] ?? 0;
+        if ($days_worked < 0) throw new Exception('Days worked must be 0 or greater.');
+        if ($overtime_hours < 0) throw new Exception('Overtime hours must be 0 or greater.');
 
-        // Calculate pay
+        // Calculate pay using manual inputs
         $base_pay = $days_worked * $employee['daily_rate'];
         $overtime_pay = $overtime_hours * $employee['overtime_rate'];
         $total_pay = $base_pay + $overtime_pay - $deductions;
@@ -83,14 +84,14 @@ if ($_POST) {
         }
         
         $stmt->bind_param('issiddddd', $employee_id, $pay_period_start, $pay_period_end, $days_worked, 
-                         $overtime_hours, $base_pay, $overtime_pay, $deductions, $total_pay);
+                 $overtime_hours, $base_pay, $overtime_pay, $deductions, $total_pay);
         if (!$stmt->execute()) {
             error_log('Execute failed: ' . $stmt->error);
             throw new Exception('Failed to create payroll: ' . $stmt->error);
         }
         $stmt->close();
 
-        $message = 'Payroll record created successfully from attendance data.';
+        $message = 'Payroll record created successfully.';
         // Clear form
         $_POST = [];
     } catch (Exception $e) {
@@ -118,7 +119,7 @@ if ($_POST) {
                 <?php if ($error): ?><div class="notification bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-4"><?php echo htmlspecialchars($error); ?></div><?php endif; ?>
 
                 <div class="bg-white rounded-xl shadow p-8">
-                    <p class="text-gray-600 mb-6 bg-blue-50 p-4 rounded">📋 Payroll will be automatically calculated from attendance records during the selected pay period.</p>
+                    <p class="text-gray-600 mb-6 bg-blue-50 p-4 rounded">📋 Enter the pay period and provide <strong>Days Worked</strong> and <strong>Overtime Hours</strong>. Payroll will be calculated from these inputs. <strong class="text-amber-600">Note: Weekends are excluded from working days calculation.</strong></p>
                     
                     <form method="post">
                         <div class="mb-4">
@@ -144,6 +145,18 @@ if ($_POST) {
                             </div>
                         </div>
 
+                        <div class="grid grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">Days Worked (Excluding Weekends) *</label>
+                                <input type="number" name="days_worked" id="days_worked" min="0" step="1" required value="<?php echo $_POST['days_worked'] ?? '0'; ?>" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500">
+                                <p class="text-xs text-gray-500 mt-1">Auto-calculated from pay period dates (excludes weekends)</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">Overtime Hours</label>
+                                <input type="number" name="overtime_hours" min="0" step="0.01" value="<?php echo $_POST['overtime_hours'] ?? '0'; ?>" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500">
+                            </div>
+                        </div>
+
                         <div class="mb-4">
                             <label class="block text-sm font-semibold text-gray-700 mb-2">Deductions (₱)</label>
                             <input type="number" name="deductions" min="0" step="0.01" value="<?php echo $_POST['deductions'] ?? '0'; ?>" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500">
@@ -152,9 +165,9 @@ if ($_POST) {
                         <div class="bg-gray-50 p-4 rounded-lg mb-6">
                             <p class="text-sm text-gray-600 mb-2"><strong>ℹ️ How it works:</strong></p>
                             <ul class="text-sm text-gray-600 list-disc list-inside space-y-1">
-                                <li>Days worked = number of unique attendance dates in the pay period</li>
+                                <li>Days worked = manual input you provide</li>
                                 <li>Base pay = days worked × daily rate from employee profile</li>
-                                <li>Overtime pay = overtime hours × overtime rate from attendance records</li>
+                                <li>Overtime pay = overtime hours × overtime rate from employee profile</li>
                                 <li>Total pay = base pay + overtime pay - deductions</li>
                             </ul>
                         </div>
@@ -170,6 +183,41 @@ if ($_POST) {
     </div>
 
     <script>
+        // Function to count working days (excluding weekends)
+        function countWorkingDays(startDate, endDate) {
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            let workingDays = 0;
+            
+            for (let current = new Date(start); current <= end; current.setDate(current.getDate() + 1)) {
+                const dayOfWeek = current.getDay(); // 0 = Sunday, 6 = Saturday
+                if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+                    workingDays++;
+                }
+            }
+            
+            return workingDays;
+        }
+
+        // Auto-calculate working days when dates change
+        const startDateInput = document.querySelector('input[name="pay_period_start"]');
+        const endDateInput = document.querySelector('input[name="pay_period_end"]');
+        const daysWorkedInput = document.getElementById('days_worked');
+
+        function updateWorkingDays() {
+            if (startDateInput.value && endDateInput.value) {
+                const workingDays = countWorkingDays(startDateInput.value, endDateInput.value);
+                daysWorkedInput.value = workingDays;
+            }
+        }
+
+        startDateInput.addEventListener('change', updateWorkingDays);
+        endDateInput.addEventListener('change', updateWorkingDays);
+
+        // Auto-calculate on page load if dates are already set
+        window.addEventListener('load', updateWorkingDays);
+
+        // Notification auto-dismiss
         document.querySelectorAll('.notification').forEach(notif => {
             setTimeout(() => {
                 notif.style.opacity = '0';

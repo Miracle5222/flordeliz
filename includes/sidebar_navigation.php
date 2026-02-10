@@ -8,8 +8,20 @@
 // This file is at: document_root/flordeliz/includes/sidebar_navigation.php
 // We want the app root: /flordeliz/
 $dir = str_replace('\\', '/', dirname(__DIR__));
-$doc_root = str_replace('\\', '/', $_SERVER['DOCUMENT_ROOT']);
-$app_root = '/' . trim(str_replace($doc_root, '', $dir), '/') . '/';
+$doc_root = str_replace('\\', '/', rtrim($_SERVER['DOCUMENT_ROOT'], '/'));
+
+if (strpos($dir, $doc_root) === 0) {
+    $relative = trim(substr($dir, strlen($doc_root)), '/');
+    // If app is at the document root, use single '/'
+    if ($relative === '') {
+        $app_root = '/';
+    } else {
+        $app_root = '/' . $relative . '/';
+    }
+} else {
+    // Fallback to root if we cannot compute a relative path
+    $app_root = '/';
+}
 
 
 
@@ -54,7 +66,7 @@ $is_admin = ($role === 'admin');
 
             <!-- Right Section: User Info & Profile & Logout -->
             <div class="flex gap-4 items-center">
-                <div class="flex items-center gap-2 cursor-pointer hover:opacity-75" onclick="window.location.href='<?php echo $is_staff ? '../staff/profile.php' : '../admin/profile.php'; ?>'">
+                <div class="flex items-center gap-2 cursor-pointer hover:opacity-75" onclick="window.location.href='<?php echo $is_staff ? $app_root . 'staff/profile.php' : $app_root . 'admin/profile.php'; ?>'">
                     <div class="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
                         <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
@@ -65,7 +77,7 @@ $is_admin = ($role === 'admin');
                         <p class="text-gray-500 text-xs capitalize"><?php echo htmlspecialchars($role); ?></p>
                     </div>
                 </div>
-                <a href="<?php echo $is_staff ? '../staff/profile.php' : '../admin/profile.php'; ?>" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm">
+                <a href="<?php echo $is_staff ? $app_root . 'staff/profile.php' : $app_root . 'admin/profile.php'; ?>" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm">
                     Profile
                 </a>
                 <a href="<?php echo $app_root; ?>logout.php" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition text-sm">
@@ -96,6 +108,12 @@ $is_admin = ($role === 'admin');
                     </svg>
                     <span class="sidebar-label ml-2 transition-opacity duration-300">Dashboard</span>
                 </a>
+                    <a href="<?php echo $app_root; ?>staff/transactions.php" class="sidebar-link flex items-center px-4 py-2 rounded-lg hover:text-teal-800 transition" title="Transactions">
+                        <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        <span class="sidebar-label ml-2 transition-opacity duration-300">Transactions</span>
+                    </a>
                 
                 <div class="my-4 border-t border-teal-700 sidebar-divider"></div>
                 
@@ -157,19 +175,13 @@ $is_admin = ($role === 'admin');
                     </a>
                 </div>
                 
-                <a href="<?php echo $app_root; ?>staff/payments.php" class="sidebar-link flex items-center px-4 py-2 rounded-lg hover:text-teal-800 transition" title="Payments">
+                <!-- <a href="<?php echo $app_root; ?>staff/payments.php" class="sidebar-link flex items-center px-4 py-2 rounded-lg hover:text-teal-800 transition" title="Payments">
                     <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
                     <span class="sidebar-label ml-2 transition-opacity duration-300">Payments</span>
-                </a>
+                </a> -->
                 
-                <a href="<?php echo $app_root; ?>staff/clock.php" class="sidebar-link flex items-center px-4 py-2 rounded-lg hover:text-teal-800 transition" title="Clock In/Out">
-                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                    <span class="sidebar-label ml-2 transition-opacity duration-300">Clock In/Out</span>
-                </a>
 
             <?php elseif ($is_admin): ?>
                 <!-- Admin Navigation -->
@@ -179,6 +191,12 @@ $is_admin = ($role === 'admin');
                     </svg>
                     <span class="sidebar-label ml-2 transition-opacity duration-300">Dashboard</span>
                 </a>
+                    <a href="<?php echo $app_root; ?>admin/transactions.php" class="sidebar-link flex items-center px-4 py-2 rounded-lg hover:text-amber-800 transition" title="Transactions">
+                        <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        <span class="sidebar-label ml-2 transition-opacity duration-300">Transactions</span>
+                    </a>
                 
                 <div class="my-4 border-t border-amber-700 sidebar-divider"></div>
                 
@@ -221,6 +239,7 @@ $is_admin = ($role === 'admin');
                     </svg>
                     <span class="sidebar-label ml-2 transition-opacity duration-300">Inventory Reports</span>
                 </a>
+                
 
                 <div class="my-4 border-t border-amber-700 sidebar-divider"></div>
 

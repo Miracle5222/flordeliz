@@ -26,7 +26,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $_SERVER['HTTP_X_REQUESTED_WITH'] =
     $customer_id = $_POST['customer_id'] ?? null;
     $customer_name = $_POST['customer_name'] ?? '';
     $customer_phone = $_POST['customer_phone'] ?? '';
+    $customer_email = $_POST['customer_email'] ?? '';
     $customer_category = $_POST['customer_category'] ?? '';
+    $company_type = $_POST['company_type'] ?? '';
     $delivery_date = $_POST['delivery_date'] ?? null;
     $delivery_address = $_POST['delivery_address'] ?? '';
     $downpayment = floatval($_POST['downpayment'] ?? 0);
@@ -34,8 +36,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $_SERVER['HTTP_X_REQUESTED_WITH'] =
     
     $products = json_decode($_POST['products'] ?? '[]', true);
     
-    if (empty($products) || !$delivery_date) {
-        echo json_encode(['success' => false, 'message' => 'Please add products and select delivery date']);
+    // Validation
+    if (empty($products)) {
+        echo json_encode(['success' => false, 'message' => 'Please add at least one product']);
+        exit();
+    }
+    if (!$delivery_date) {
+        echo json_encode(['success' => false, 'message' => 'Please select a delivery date']);
+        exit();
+    }
+    if (!$customer_name) {
+        echo json_encode(['success' => false, 'message' => 'Please enter customer name']);
+        exit();
+    }
+    if (!$customer_email) {
+        echo json_encode(['success' => false, 'message' => 'Please enter customer email']);
+        exit();
+    }
+    if (!$customer_id && !$customer_category) {
+        echo json_encode(['success' => false, 'message' => 'Please select a customer category for new customer']);
         exit();
     }
     
@@ -44,8 +63,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $_SERVER['HTTP_X_REQUESTED_WITH'] =
         
         // Create or get customer
         if (!$customer_id) {
-            $stmt = $conn->prepare('INSERT INTO customers (name, phone, category) VALUES (?, ?, ?)');
-            $stmt->bind_param('sss', $customer_name, $customer_phone, $customer_category);
+            // Note: database `customers` table currently has columns (name, phone, email, category).
+            // We capture company type in `$company_type` but do not store it unless schema supports it.
+            $stmt = $conn->prepare('INSERT INTO customers (name, phone, email, category) VALUES (?, ?, ?, ?)');
+            $stmt->bind_param('ssss', $customer_name, $customer_phone, $customer_email, $customer_category);
             $stmt->execute();
             $customer_id = $conn->insert_id;
             $stmt->close();
@@ -57,11 +78,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $_SERVER['HTTP_X_REQUESTED_WITH'] =
             $total_amount += $product['subtotal'];
         }
         
+        // Calculate discount
+        $discount = 0;
+        if ($total_amount >= 1000) {
+            $discount = $total_amount * 0.15;
+        } elseif ($total_amount >= 500) {
+            $discount = $total_amount * 0.10;
+        } elseif ($total_amount >= 100) {
+            $discount = $total_amount * 0.05;
+        }
+        
+        // Apply discount to total
+        $total_amount -= $discount;
+        
+        // Determine order status based on downpayment
+        $status = ($downpayment >= $total_amount) ? 'paid' : 'pending';
+        
         // Generate order number
         $order_number = 'ORD-' . date('YmdHis');
-        
-        // Create order (database schema does not include downpayment fields)
-        $status = 'pending';
         $stmt = $conn->prepare('INSERT INTO orders (order_number, customer_id, order_date, delivery_date, delivery_address, status, total_amount, notes) VALUES (?, ?, NOW(), ?, ?, ?, ?, ?)');
         // types: s=order_number, i=customer_id, s=delivery_date, s=delivery_address, s=status, d=total_amount, s=notes
         $stmt->bind_param('sisssds', $order_number, $customer_id, $delivery_date, $delivery_address, $status, $total_amount, $notes);
@@ -98,14 +132,59 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $_SERVER['HTTP_X_REQUESTED_WITH'] =
         $conn->close();
         
         // Send SMS confirmation to customer (after database commit)
-        $sms_result = sendOrderConfirmationSMS($customer_name, $customer_phone, $order_number, $delivery_date, $total_amount);
+        $sms_result = sendOrderConfirmationSMS($customer_name, $customer_phone, $order_number, $delivery_date, $total_amount, $customer_email);
+
+        // Send email notification with delivery details
+        $email_subject = "Order Confirmation - $order_number";
+        $email_body = "Hi $customer_name,\n\n";
+        $email_body .= "Your order #$order_number has been confirmed!\n\n";
+        $email_body .= "Order Total: ₱" . number_format($total_amount, 2) . "\n";
+        $email_body .= "Delivery Date: " . date('M d, Y', strtotime($delivery_date)) . " at 2:00 PM\n";
+        $email_body .= "Delivery Address: $delivery_address\n\n";
+        if ($downpayment > 0) {
+            $email_body .= "Downpayment Paid: ₱" . number_format($downpayment, 2) . "\n";
+            $remaining = $total_amount - $downpayment;
+            if ($remaining > 0) {
+                $email_body .= "Remaining Balance: ₱" . number_format($remaining, 2) . "\n";
+            }
+        }
+        $email_body .= "\nThank you for ordering from Flor de Liz!\n\n";
+        $email_body .= "Order Details:\n";
+        foreach ($products as $product) {
+            $email_body .= "- {$product['name']}: {$product['quantity']} x ₱{$product['unit_price']} = ₱{$product['subtotal']}\n";
+        }
+        $email_body .= "\nIf you have any questions, please contact us.";
+
+        $email_result = sendEmail($customer_email, $email_subject, $email_body);
+        error_log('Email send result: ' . print_r($email_result, true));
+
+        // Build confirmation message
+        $confirmation_message = 'Order created successfully.';
+        if ($sms_result['success']) {
+            if ($sms_result['method'] === 'sms') {
+                $confirmation_message .= ' SMS confirmation sent to customer.';
+            } elseif ($sms_result['method'] === 'email') {
+                $confirmation_message .= ' Email confirmation sent (SMS unavailable).';
+            } else {
+                $confirmation_message .= ' Confirmation sent to customer.';
+            }
+        } else {
+            $confirmation_message .= ' Warning: Could not send SMS confirmation.';
+        }
+        if ($email_result['success']) {
+            $confirmation_message .= ' Email notification sent.';
+        } else {
+            $confirmation_message .= ' Warning: Could not send email notification.';
+        }
 
         echo json_encode([
             'success' => true,
-            'message' => 'Order created successfully. ' . ($sms_result['success'] ? 'Confirmation SMS sent to customer.' : 'Note: SMS delivery may have encountered an issue.'),
+            'message' => $confirmation_message,
             'order_number' => $order_number,
             'order_id' => $order_id,
-            'sms_sent' => $sms_result['success']
+            'sms_sent' => $sms_result['success'],
+            'email_sent' => $email_result['success'],
+            'notification_method' => $sms_result['method'] ?? 'none'
         ]);
     } catch (Exception $e) {
         // If mysqli_report enabled, errors throw exceptions; rollback and return JSON error
@@ -122,9 +201,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $_SERVER['HTTP_X_REQUESTED_WITH'] =
 // Get customers for autocomplete
 $conn = require_once __DIR__ . '/../../config/database.php';
 $customers = [];
-$result = $conn->query('SELECT id, name, phone, category FROM customers ORDER BY name');
-while ($row = $result->fetch_assoc()) {
-    $customers[] = $row;
+$result = $conn->query('SELECT id, name, phone, email, address, category FROM customers WHERE is_active = 1 ORDER BY name');
+if (!$result) {
+    error_log('Database error: ' . $conn->error);
+} else {
+    while ($row = $result->fetch_assoc()) {
+        $customers[] = $row;
+    }
 }
 
 // Define products with pricing
@@ -173,7 +256,7 @@ $conn->close();
                                         <select id="customerSelect" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500">
                                             <option value="">-- New Customer --</option>
                                             <?php foreach ($customers as $cust): ?>
-                                                <option value="<?php echo $cust['id']; ?>" data-name="<?php echo htmlspecialchars($cust['name']); ?>" data-phone="<?php echo htmlspecialchars($cust['phone']); ?>" data-category="<?php echo htmlspecialchars($cust['category']); ?>">
+                                                <option value="<?php echo htmlspecialchars($cust['id']); ?>" data-name="<?php echo htmlspecialchars($cust['name'] ?? ''); ?>" data-phone="<?php echo htmlspecialchars($cust['phone'] ?? ''); ?>" data-email="<?php echo htmlspecialchars($cust['email'] ?? ''); ?>" data-category="<?php echo htmlspecialchars($cust['category'] ?? ''); ?>">
                                                     <?php echo htmlspecialchars($cust['name']); ?>
                                                 </option>
                                             <?php endforeach; ?>
@@ -192,7 +275,12 @@ $conn->close();
                                     </div>
 
                                     <div class="mt-4">
-                                        <label class="block text-sm font-semibold text-gray-700 mb-2">Customer Category</label>
+                                        <label class="block text-sm font-semibold text-gray-700 mb-2">Email * <span class="text-xs text-gray-500">(for order updates)</span></label>
+                                        <input type="email" id="customerEmail" name="customer_email" placeholder="customer@example.com" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500">
+                                    </div>
+
+                                    <div class="mt-4">
+                                        <label class="block text-sm font-semibold text-gray-700 mb-2">Company Name</label>
                                         <select id="customerCategory" name="customer_category" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500">
                                             <option value="">Select Category</option>
                                             <option value="Ogis">Ogis</option>
@@ -202,6 +290,16 @@ $conn->close();
                                             <option value="Other">Other</option>
                                         </select>
                                     </div>
+
+                                    <div class="mt-4">
+                                        <label class="block text-sm font-semibold text-gray-700 mb-2">Company Type</label>
+                                        <select id="companyType" name="company_type" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500">
+                                            <option value="">Select Type</option>
+                                            <option value="Private">Private</option>
+                                            <option value="Public">Public</option>
+                                            <option value="Government">Government</option>
+                                        </select>
+                                    </div>
                                 </div>
 
                                 <!-- Products Section -->
@@ -209,18 +307,24 @@ $conn->close();
                                     <h3 class="text-lg font-bold text-gray-900 mb-4">Products</h3>
                                     
                                     <div class="mb-4">
-                                        <label class="block text-sm font-semibold text-gray-700 mb-2">Add Product *</label>
+                                        <label class="block text-sm font-semibold text-gray-700 mb-2">Select Product *</label>
+                                        <select id="productSelect" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 mb-2">
+                                            <option value="">-- Select Product --</option>
+                                            <?php foreach ($products as $prod): ?>
+                                                <option value="<?php echo $prod['id']; ?>" data-price="<?php echo $prod['price']; ?>" data-name="<?php echo htmlspecialchars($prod['name']); ?>">
+                                                    <?php echo htmlspecialchars($prod['name']); ?> 
+                                                </option>
+                                            <?php endforeach; ?>
+                                        </select>
                                         <div class="flex gap-2">
-                                            <select id="productSelect" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500">
-                                                <option value="">-- Select Product --</option>
-                                                <?php foreach ($products as $prod): ?>
-                                                    <option value="<?php echo $prod['id']; ?>" data-price="<?php echo $prod['price']; ?>" data-name="<?php echo htmlspecialchars($prod['name']); ?>">
-                                                        <?php echo htmlspecialchars($prod['name']); ?> - ₱<?php echo number_format($prod['price'], 2); ?>
-                                                    </option>
-                                                <?php endforeach; ?>
-                                            </select>
-                                            <input type="number" id="quantity" placeholder="Qty" value="1" class="w-20 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500" min="1">
-                                            <button type="button" onclick="addProduct()" class="px-6 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition">Add</button>
+                                            <div class="flex-1">
+                                                <label class="block text-sm font-semibold text-gray-700 mb-1">Quantity</label>
+                                                <input type="number" id="quantity" placeholder="Qty" value="1" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500" min="1">
+                                            </div>
+                                            <div class="flex-shrink-0">
+                                                <label class="block text-sm font-semibold text-gray-700 mb-1">&nbsp;</label>
+                                                <button type="button" onclick="addProduct()" class="px-6 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition">Add</button>
+                                            </div>
                                         </div>
                                     </div>
 
@@ -235,7 +339,7 @@ $conn->close();
                                     
                                     <div class="mb-4">
                                         <label class="block text-sm font-semibold text-gray-700 mb-2">Delivery Date *</label>
-                                        <input type="date" id="deliveryDate" name="delivery_date" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500" required>
+                                        <input type="date" id="deliveryDate" name="delivery_date" min="<?php echo date('Y-m-d'); ?>" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500" required>
                                     </div>
 
                                     <div class="mb-4">
@@ -244,7 +348,7 @@ $conn->close();
                                     </div>
 
                                     <div class="mb-4">
-                                        <label class="block text-sm font-semibold text-gray-700 mb-2">Downpayment (Optional)</label>
+                                        <label class="block text-sm font-semibold text-gray-700 mb-2">Downpayment</label>
                                         <input type="number" id="downpayment" name="downpayment" placeholder="0.00" step="0.01" min="0" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500">
                                     </div>
 
@@ -301,5 +405,24 @@ $conn->close();
     </div>
 
     <script src="../../assets/js/ajax/orders.js"></script>
+    <script>
+        // Enforce delivery date to be today or later
+        document.addEventListener('DOMContentLoaded', function() {
+            const deliveryDateInput = document.getElementById('deliveryDate');
+            if (deliveryDateInput) {
+                const today = new Date().toISOString().split('T')[0];
+                deliveryDateInput.setAttribute('min', today);
+                
+                deliveryDateInput.addEventListener('change', function() {
+                    const selectedDate = new Date(this.value);
+                    const todayDate = new Date(today);
+                    if (selectedDate < todayDate) {
+                        alert('Delivery date cannot be before today.');
+                        this.value = today;
+                    }
+                });
+            }
+        });
+    </script>
 </body>
 </html>

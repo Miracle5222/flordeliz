@@ -1,0 +1,117 @@
+# TRANSACTION SYSTEM - QUICK REFERENCE
+
+## Where to Find Transactions
+- **Staff**: Staff Dashboard → Transactions
+- **Admin**: Admin Dashboard → Transactions
+
+## What Gets Recorded Automatically
+
+### INVENTORY TRANSACTIONS
+✓ Added when: Products/materials added, sold, or adjusted
+✓ Fields recorded: Item name, quantity, type, timestamp, user
+✓ Types: Stock In (green), Stock Out (red), Stock Adjustment (yellow)
+
+### SALES TRANSACTIONS  
+✓ Added when: Direct sales/counter sales recorded
+✓ Fields recorded: Sale amount, date, notes, user
+✓ Shows: Total revenue and transaction details
+
+## Column Labels Explained
+
+### Inventory Tab
+| Label | What It Shows |
+|-------|---|
+| Transaction Date | When stock moved |
+| Transaction Type | Stock In / Out / Adjustment |
+| Item Name | Product or material name |
+| Quantity | How many units |
+| Description | Why (detailed notes) |
+| Recorded By | Staff member's name |
+
+### Sales Tab
+| Label | What It Shows |
+|-------|---|
+| Transaction ID | Unique sale ID |
+| Sale Date | When sale happened |
+| Amount | Sale total (₱) |
+| Description | Sale notes |
+| Recorded By | Staff member's name |
+
+## Statistics Available
+
+**Inventory Tab:**
+- Total inventory transactions
+- Count by type (In/Out/Adjustment)
+
+**Sales Tab:**
+- Number of sales
+- Total revenue (₱)
+- Average per sale (₱)
+
+## How Transactions Get Created
+
+### Stock In
+```
+Action: Add new inventory item
+Location: Staff → Inventory → Add New Item
+Auto-creates: inventory_transactions record (type='in')
+```
+
+### Stock Out
+```
+Action: Record a sale
+Location: Staff → Sales → Create Sale
+Auto-creates: 
+  - inventory_transactions record (type='out')
+  - sales_transactions record
+  - Updates inventory quantity
+```
+
+### Stock Adjustment
+```
+Action: Manual inventory correction
+Location: Admin tools (if available)
+Auto-creates: inventory_transactions record (type='adjustment')
+```
+
+## Search & Filter
+
+**Inventory Tab:**
+- Filter by Type: Select dropdown
+- Search by Item: Type item name
+
+**Sales Tab:**
+- Search box: Finds notes/descriptions
+
+**Recent Sales:**
+- Shows last 5 sales with item counts
+
+## Data Accuracy
+
+✓ All transactions timestamped automatically
+✓ User attribution (who recorded it)
+✓ Quantity and amount verified
+✓ Linked to customer/product records
+✓ Permanent audit trail
+
+## Important Notes
+
+⚠️ Transactions created automatically - no manual entry needed
+⚠️ Cannot delete transactions (audit trail maintained)
+⚠️ All amounts shown in Philippine Peso (₱)
+⚠️ Dates shown in format: Mon DD, YYYY (e.g., Feb 04, 2026)
+⚠️ Times shown in 24-hour format with minutes
+
+## Color Coding
+
+**Inventory Types:**
+- 🟢 GREEN: Stock In (items added)
+- 🔴 RED: Stock Out (items sold)
+- 🟡 YELLOW: Stock Adjustment (corrections)
+
+**Staff Pages:** Teal theme
+**Admin Pages:** Amber theme
+
+---
+Last Updated: February 4, 2026
+Version: 1.0

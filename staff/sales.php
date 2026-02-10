@@ -34,28 +34,6 @@ $result = $conn->query("SELECT s.id, s.sale_date, s.total_amount, s.created_at, 
                     <!-- <a href="create.php" class="px-4 py-2 bg-teal-600 text-white rounded">Record Sale</a> -->
                 </div>
                 <div class="bg-white rounded-xl shadow p-4">
-                    <div class="flex flex-wrap gap-3 mb-4">
-                        <div>
-                            <label class="text-sm text-gray-600">Date from</label>
-                            <input type="date" id="filter-date-from" class="border px-2 py-1 rounded">
-                        </div>
-                        <div>
-                            <label class="text-sm text-gray-600">Date to</label>
-                            <input type="date" id="filter-date-to" class="border px-2 py-1 rounded">
-                        </div>
-                        <div>
-                            <label class="text-sm text-gray-600">Min total (₱)</label>
-                            <input type="number" step="0.01" id="filter-min-total" class="border px-2 py-1 rounded" placeholder="0.00">
-                        </div>
-                        <div>
-                            <label class="text-sm text-gray-600">Max total (₱)</label>
-                            <input type="number" step="0.01" id="filter-max-total" class="border px-2 py-1 rounded" placeholder="0.00">
-                        </div>
-                        <div class="flex items-end">
-                            <button id="filter-clear" class="px-3 py-1 bg-gray-200 rounded">Clear</button>
-                        </div>
-                    </div>
-
                     <table id="sales-table" class="w-full text-sm display">
                         <thead>
                             <tr class="text-left text-gray-600 border-b">
@@ -86,19 +64,10 @@ $result = $conn->query("SELECT s.id, s.sale_date, s.total_amount, s.created_at, 
 </body>
 </html>
 
-    <!-- Scripts: jQuery + DataTables -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
     <script>
         (function(){
-            const parseDate = (d) => {
-                if (!d) return null;
-                const s = d.split(' ')[0];
-                const parts = s.split('-');
-                if (parts.length !== 3) return null;
-                return new Date(parts[0], parts[1]-1, parts[2]);
-            };
-
             const table = $('#sales-table').DataTable({
                 order: [[0, 'desc']],
                 pageLength: 25,
@@ -106,45 +75,6 @@ $result = $conn->query("SELECT s.id, s.sale_date, s.total_amount, s.created_at, 
                     { targets: 3, orderable: false }
                 ],
                 language: { search: "Quick search:" }
-            });
-
-            $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
-                if (settings.nTable.id !== 'sales-table') return true;
-
-                const dateFrom = $('#filter-date-from').val();
-                const dateTo = $('#filter-date-to').val();
-                const minTotal = parseFloat($('#filter-min-total').val()) || null;
-                const maxTotal = parseFloat($('#filter-max-total').val()) || null;
-
-                const dateStr = data[0] || '';
-                const totalStr = data[1] || '';
-
-                const rowDate = parseDate(dateStr);
-                const fromDate = dateFrom ? parseDate(dateFrom) : null;
-                const toDate = dateTo ? parseDate(dateTo) : null;
-
-                let total = parseFloat(totalStr.replace(/[^0-9.-]+/g, ''));
-                if (isNaN(total)) total = null;
-
-                if (fromDate && rowDate && rowDate < fromDate) return false;
-                if (toDate && rowDate && rowDate > toDate) return false;
-                if (minTotal !== null && total !== null && total < minTotal) return false;
-                if (maxTotal !== null && total !== null && total > maxTotal) return false;
-
-                return true;
-            });
-
-            $('#filter-date-from, #filter-date-to, #filter-min-total, #filter-max-total').on('change keyup', function(){
-                table.draw();
-            });
-
-            $('#filter-clear').on('click', function(e){
-                e.preventDefault();
-                $('#filter-date-from').val('');
-                $('#filter-date-to').val('');
-                $('#filter-min-total').val('');
-                $('#filter-max-total').val('');
-                table.search('').columns().search('').draw();
             });
         })();
     </script>

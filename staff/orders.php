@@ -112,12 +112,12 @@ $conn->close();
                         <p class="text-3xl font-bold text-yellow-600 mt-2"><?php echo $status_counts['pending'] ?? 0; ?></p>
                     </div>
                     <div class="bg-white p-6 rounded-xl shadow-md">
-                        <p class="text-gray-600 text-sm font-semibold">In Progress</p>
+                        <p class="text-gray-600 text-sm font-semibold">On The Way</p>
                         <p class="text-3xl font-bold text-blue-600 mt-2"><?php echo $status_counts['in_progress'] ?? 0; ?></p>
                     </div>
                     <div class="bg-white p-6 rounded-xl shadow-md">
-                        <p class="text-gray-600 text-sm font-semibold">Completed</p>
-                        <p class="text-3xl font-bold text-green-600 mt-2"><?php echo $status_counts['completed'] ?? 0; ?></p>
+                        <p class="text-gray-600 text-sm font-semibold">Delivered</p>
+                        <p class="text-3xl font-bold text-green-600 mt-2"><?php echo ($status_counts['completed'] ?? 0) + ($status_counts['paid'] ?? 0); ?></p>
                     </div>
                 </div>
 
@@ -128,8 +128,8 @@ $conn->close();
                         <select name="status" class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500">
                             <option value="">All Status</option>
                             <option value="pending" <?php echo $status_filter === 'pending' ? 'selected' : ''; ?>>Pending</option>
-                            <option value="in_progress" <?php echo $status_filter === 'in_progress' ? 'selected' : ''; ?>>In Progress</option>
-                            <option value="completed" <?php echo $status_filter === 'completed' ? 'selected' : ''; ?>>Completed</option>
+                            <option value="in_progress" <?php echo $status_filter === 'in_progress' ? 'selected' : ''; ?>>On The Way</option>
+                            <option value="completed" <?php echo $status_filter === 'completed' ? 'selected' : ''; ?>>Delivered</option>
                             <option value="cancelled" <?php echo $status_filter === 'cancelled' ? 'selected' : ''; ?>>Cancelled</option>
                         </select>
                         <button type="submit" class="px-6 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition">Filter</button>
@@ -164,18 +164,37 @@ $conn->close();
                                                 $status_colors = [
                                                     'pending' => 'bg-yellow-100 text-yellow-800',
                                                     'in_progress' => 'bg-blue-100 text-blue-800',
+                                                    'paid' => 'bg-green-100 text-green-800',
                                                     'completed' => 'bg-green-100 text-green-800',
                                                     'cancelled' => 'bg-red-100 text-red-800'
                                                 ];
                                                 $color = $status_colors[$order['status']] ?? 'bg-gray-100 text-gray-800';
                                             ?>
                                             <span class="px-3 py-1 rounded-full text-sm font-semibold <?php echo $color; ?>">
-                                                <?php echo ucwords(str_replace('_', ' ', $order['status'])); ?>
+                                                <?php 
+                                                    $status_text = $order['status'];
+                                                    if ($status_text === 'in_progress') {
+                                                        $status_text = 'on the way';
+                                                    } elseif ($status_text === 'completed') {
+                                                        $status_text = 'delivered';
+                                                    }
+                                                    echo ucwords(str_replace('_', ' ', $status_text)); 
+                                                ?>
                                             </span>
                                         </td>
                                         <td class="px-6 py-4">
-                                            <button onclick="viewOrder(<?php echo $order['id']; ?>)" class="text-teal-600 hover:text-teal-800 font-semibold text-sm">View</button>
-                                            <button onclick="editOrder(<?php echo $order['id']; ?>)" class="text-blue-600 hover:text-blue-800 font-semibold text-sm ml-3">Edit</button>
+                                            <div class="relative">
+                                                <button onclick="toggleDropdown(<?php echo $order['id']; ?>)" class="text-teal-600 hover:text-teal-800 font-semibold text-sm">Actions ▼</button>
+                                                <div id="dropdown-<?php echo $order['id']; ?>" class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10 hidden">
+                                                    <a href="#" onclick="viewOrder(<?php echo $order['id']; ?>)" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">View</a>
+                                                    <a href="#" onclick="editOrder(<?php echo $order['id']; ?>)" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Edit</a>
+                                                    <?php if ($order['status'] === 'pending'): ?>
+                                                        <a href="#" onclick="approveOrder(<?php echo $order['id']; ?>)" class="block px-4 py-2 text-sm text-green-700 hover:bg-gray-100">Approve</a>
+                                                        <a href="#" onclick="disapproveOrder(<?php echo $order['id']; ?>)" class="block px-4 py-2 text-sm text-red-700 hover:bg-gray-100">Disapprove</a>
+                                                    <?php endif; ?>
+                                                    <a href="#" onclick="deleteOrder(<?php echo $order['id']; ?>)" class="block px-4 py-2 text-sm text-red-700 hover:bg-gray-100">Delete</a>
+                                                </div>
+                                            </div>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
@@ -211,6 +230,59 @@ $conn->close();
         
         function editOrder(orderId) {
             window.location.href = `orders/view.php?id=${orderId}&edit=1`;
+        }
+
+        function approveOrder(orderId) {
+            if (confirm('Approve this order?')) {
+                updateStatus(orderId, 'in_progress');
+            }
+        }
+
+        function disapproveOrder(orderId) {
+            if (confirm('Disapprove this order?')) {
+                updateStatus(orderId, 'cancelled');
+            }
+        }
+
+        function deleteOrder(orderId) {
+            if (confirm('Delete this order? This action cannot be undone.')) {
+                fetch(`orders/delete.php?id=${orderId}`, { method: 'GET' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert('Error: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    alert('Error: ' + error.message);
+                });
+            }
+        }
+
+        function updateStatus(orderId, status) {
+            fetch('orders/update_status.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: orderId, status: status })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                alert('Error: ' + error.message);
+            });
+        }
+
+        function toggleDropdown(orderId) {
+            const dropdown = document.getElementById('dropdown-' + orderId);
+            dropdown.classList.toggle('hidden');
         }
     </script>
 </body>

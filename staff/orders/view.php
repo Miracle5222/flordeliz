@@ -1,4 +1,9 @@
 <?php
+// Load PHPMailer at the top
+require_once __DIR__ . '/../../vendor/autoload.php';
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
+
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
@@ -21,56 +26,283 @@ if (!$order_id) {
 
 $conn = require_once __DIR__ . '/../../config/database.php';
 
+if (!$conn) {
+    die('Database connection failed. Please check your database configuration and ensure MySQL is running.');
+}
+
+/**
+ * Send status update email to customer
+ */
+function sendStatusUpdateEmail($order, $status, $items) {
+    try {
+        // Load email config
+        $email_config = require __DIR__ . '/../../config/email.php';
+        
+        $mail = new PHPMailer(true);
+        
+        // Server settings
+        $mail->isSMTP();
+        $mail->Host = $email_config['host'];
+        $mail->SMTPAuth = true;
+        $mail->Username = $email_config['username'];
+        $mail->Password = $email_config['password'];
+        $mail->SMTPSecure = $email_config['secure'];
+        $mail->Port = $email_config['port'];
+        
+        // Sender
+        $mail->setFrom($email_config['from_email'], $email_config['from_name']);
+        
+        // Recipient
+        $mail->addAddress($order['customer_email'], $order['customer_name']);
+        
+        // Email content
+        $status_messages = [
+            'pending' => 'Your order has been received and is pending confirmation.',
+            'in_progress' => 'Your order is now being prepared. Thank you for your patience.',
+            'paid' => 'Payment for your order has been received. We will proceed with processing.',
+            'completed' => 'Your order has been completed and is ready for pickup or delivery.',
+            'cancelled' => 'Your order has been cancelled. Please contact us if you have any questions.'
+        ];
+        
+        $status_label = ucfirst(str_replace('_', ' ', $status));
+        $status_message = $status_messages[$status] ?? 'Your order status has been updated.';
+        
+        // Build items list HTML
+        $items_html = '';
+        $total = 0;
+        foreach ($items as $item) {
+            $item_total = $item['quantity'] * $item['unit_price'];
+            $total += $item_total;
+            $items_html .= sprintf(
+                '<tr><td style="padding: 8px; border-bottom: 1px solid #ddd;">%s</td><td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right;">%d</td><td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right;">₱%.2f</td><td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right;">₱%.2f</td></tr>',
+                htmlspecialchars($item['product_name'] ?? 'Product'),
+                $item['quantity'],
+                $item['unit_price'],
+                $item_total
+            );
+        }
+        
+        $delivery_info = '';
+        if (!empty($order['delivery_date'])) {
+            $delivery_info .= '<p><strong>Delivery Date:</strong> ' . date('F d, Y', strtotime($order['delivery_date'])) . '</p>';
+        }
+        if (!empty($order['delivery_address'])) {
+            $delivery_info .= '<p><strong>Delivery Address:</strong> ' . htmlspecialchars($order['delivery_address']) . '</p>';
+        }
+        
+        // HTML body
+        $html_body = sprintf(
+            '<!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <style>
+                    body { font-family: Arial, sans-serif; color: #333; }
+                    .container { max-width: 600px; margin: 0 auto; border: 1px solid #ddd; padding: 20px; }
+                    .header { background-color: #2c5f2d; color: white; padding: 15px; text-align: center; border-radius: 5px 5px 0 0; }
+                    .content { padding: 20px; }
+                    .status-badge { display: inline-block; padding: 8px 16px; border-radius: 5px; font-weight: bold; margin: 10px 0; }
+                    .status-pending { background-color: #fff3cd; color: #856404; }
+                    .status-in_progress { background-color: #d1ecf1; color: #0c5460; }
+                    .status-paid { background-color: #d4edda; color: #155724; }
+                    .status-completed { background-color: #d4edda; color: #155724; }
+                    .status-cancelled { background-color: #f8d7da; color: #721c24; }
+                    table { width: 100%%; border-collapse: collapse; margin: 15px 0; }
+                    th { background-color: #f5f5f5; padding: 10px; text-align: left; border-bottom: 2px solid #ddd; }
+                    .footer { background-color: #f5f5f5; padding: 15px; text-align: center; font-size: 12px; color: #666; border-radius: 0 0 5px 5px; }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h2>Order Status Update - Flor de Liz</h2>
+                    </div>
+                    <div class="content">
+                        <p>Dear <strong>%s</strong>,</p>
+                        
+                        <p>This is to inform you that your order has been updated:</p>
+                        
+                        <div class="status-badge status-%s">%s</div>
+                        
+                        <p>%s</p>
+                        
+                        <h3>Order Details</h3>
+                        <p><strong>Order ID:</strong> #%d</p>
+                        <p><strong>Order Date:</strong> %s</p>
+                        
+                        <h3>Items Ordered</h3>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Product</th>
+                                    <th>Quantity</th>
+                                    <th>Unit Price</th>
+                                    <th>Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                %s
+                            </tbody>
+                        </table>
+                        
+                        <p><strong>Order Total:</strong> ₱%.2f</p>
+                        
+                        %s
+                        
+                        <p>If you have any questions or concerns, please do not hesitate to contact us:</p>
+                        <p>
+                            <strong>Flor de Liz</strong><br>
+                            Phone: 0915-123-4567<br>
+                            Email: flordeliz@gmail.com
+                        </p>
+                        
+                        <p>Thank you for your business!</p>
+                    </div>
+                    <div class="footer">
+                        <p>This is an automated email. Please do not reply to this message.</p>
+                        <p>© 2026 Flor de Liz. All rights reserved.</p>
+                    </div>
+                </div>
+            </body>
+            </html>',
+            htmlspecialchars($order['customer_name']),
+            $status,
+            $status_label,
+            $status_message,
+            $order['id'],
+            date('F d, Y g:i A', strtotime($order['created_at'])),
+            $items_html,
+            $total,
+            $delivery_info
+        );
+        
+        $mail->isHTML(true);
+        $mail->Subject = "Order #" . $order['id'] . " - Status Update: " . $status_label;
+        $mail->Body = $html_body;
+        $mail->AltBody = "Your order #" . $order['id'] . " status has been updated to: " . $status_label;
+        
+        $mail->send();
+        return true;
+        
+    } catch (Exception $e) {
+        error_log('Email sending failed: ' . $e->getMessage());
+        return false;
+    }
+}
+
 // Handle form submission for updates
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $status = $_POST['status'] ?? '';
+    $old_status = $_POST['old_status'] ?? '';
     $delivery_date = $_POST['delivery_date'] ?? '';
     $delivery_address = $_POST['delivery_address'] ?? '';
     $notes = $_POST['notes'] ?? '';
     
     // Update order
     $stmt = $conn->prepare('UPDATE orders SET status = ?, delivery_date = ?, delivery_address = ?, notes = ? WHERE id = ?');
-    $stmt->bind_param('ssssi', $status, $delivery_date, $delivery_address, $notes, $order_id);
-    
-    if ($stmt->execute()) {
-        // Handle item updates
-        if (isset($_POST['item_id']) && is_array($_POST['item_id'])) {
-            $all_items_updated = true;
-            foreach ($_POST['item_id'] as $index => $item_id) {
-                $quantity = $_POST['quantity'][$index] ?? 0;
-                $unit_price = $_POST['unit_price'][$index] ?? 0;
-                
-                if ($quantity > 0) {
-                    $update_item = $conn->prepare('UPDATE order_items SET quantity = ?, unit_price = ? WHERE id = ?');
-                    $update_item->bind_param('idi', $quantity, $unit_price, $item_id);
-                    if (!$update_item->execute()) {
-                        $all_items_updated = false;
+    if (!$stmt) {
+        $error = 'Database error: Failed to prepare order update statement.';
+    } else {
+        $stmt->bind_param('ssssi', $status, $delivery_date, $delivery_address, $notes, $order_id);
+        
+        if ($stmt->execute()) {
+            // Handle item updates
+            if (isset($_POST['item_id']) && is_array($_POST['item_id'])) {
+                $all_items_updated = true;
+                foreach ($_POST['item_id'] as $index => $item_id) {
+                    $quantity = $_POST['quantity'][$index] ?? 0;
+                    $unit_price = $_POST['unit_price'][$index] ?? 0;
+                    
+                    if ($quantity > 0) {
+                        $update_item = $conn->prepare('UPDATE order_items SET quantity = ?, unit_price = ? WHERE id = ?');
+                        if (!$update_item) {
+                            $all_items_updated = false;
+                            $error = 'Database error: Failed to prepare item update statement.';
+                        } else {
+                            $update_item->bind_param('idi', $quantity, $unit_price, $item_id);
+                            if (!$update_item->execute()) {
+                                $all_items_updated = false;
+                                $error = 'Failed to update item: ' . $update_item->error;
+                            }
+                            $update_item->close();
+                        }
                     }
-                    $update_item->close();
+                }
+                
+                // Update total amount
+                $total = 0;
+                foreach ($_POST['item_id'] as $index => $item_id) {
+                    $total += ($_POST['quantity'][$index] ?? 0) * ($_POST['unit_price'][$index] ?? 0);
+                }
+                
+                $update_total = $conn->prepare('UPDATE orders SET total_amount = ? WHERE id = ?');
+                if (!$update_total) {
+                    $error = 'Database error: Failed to prepare total update statement.';
+                } else {
+                    $update_total->bind_param('di', $total, $order_id);
+                    $update_total->execute();
+                    $update_total->close();
                 }
             }
             
-            // Update total amount
-            $total = 0;
-            foreach ($_POST['item_id'] as $index => $item_id) {
-                $total += ($_POST['quantity'][$index] ?? 0) * ($_POST['unit_price'][$index] ?? 0);
+            // Handle payment addition
+            if (!empty($_POST['payment_amount']) && $_POST['payment_amount'] > 0) {
+                $payment_amount = $_POST['payment_amount'];
+                $payment_method = $_POST['payment_method'] ?? 'cash';
+                $payment_type = 'additional';
+                
+                $payment_stmt = $conn->prepare('INSERT INTO payments (order_id, amount, payment_date, payment_method, payment_type) VALUES (?, ?, NOW(), ?, ?)');
+                if (!$payment_stmt) {
+                    $error = 'Database error: Failed to prepare payment insert statement.';
+                } else {
+                    $payment_stmt->bind_param('idss', $order_id, $payment_amount, $payment_method, $payment_type);
+                    if (!$payment_stmt->execute()) {
+                        $error = 'Failed to add payment: ' . $payment_stmt->error;
+                    }
+                    $payment_stmt->close();
+                }
             }
             
-            $update_total = $conn->prepare('UPDATE orders SET total_amount = ? WHERE id = ?');
-            $update_total->bind_param('di', $total, $order_id);
-            $update_total->execute();
-            $update_total->close();
+            $stmt->close();
+            
+            // Send email if status changed
+            if ($status != $old_status && $status) {
+                // Fetch customer email and order items for email
+                $email_stmt = $conn->prepare('SELECT o.*, c.name as customer_name, c.email as customer_email 
+                                             FROM orders o 
+                                             LEFT JOIN customers c ON o.customer_id = c.id 
+                                             WHERE o.id = ?');
+                if ($email_stmt) {
+                    $email_stmt->bind_param('i', $order_id);
+                    $email_stmt->execute();
+                    $email_order = $email_stmt->get_result()->fetch_assoc();
+                    $email_stmt->close();
+                    
+                    // Fetch items
+                    $items_stmt = $conn->prepare('SELECT oi.*, p.name as product_name FROM order_items oi LEFT JOIN products p ON oi.product_id = p.id WHERE oi.order_id = ?');
+                    if ($items_stmt) {
+                        $items_stmt->bind_param('i', $order_id);
+                        $items_stmt->execute();
+                        $email_items = $items_stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+                        $items_stmt->close();
+                        
+                        // Send email if customer has email
+                        if (!empty($email_order['customer_email'])) {
+                            sendStatusUpdateEmail($email_order, $status, $email_items);
+                        }
+                    }
+                }
+            }
+            
+            $conn->close();
+            // Redirect to view page without edit mode after successful update
+            header('Location: view.php?id=' . $order_id . '&success=1');
+            exit();
+        } else {
+            $error = 'Failed to update order: ' . $stmt->error;
+            $stmt->close();
         }
-        
-        $stmt->close();
-        $conn->close();
-        // Redirect to view page without edit mode after successful update
-        header('Location: view.php?id=' . $order_id . '&success=1');
-        exit();
-    } else {
-        $error = 'Failed to update order. Please try again.';
     }
-    $stmt->close();
 }
 
 // Handle success message from redirect
@@ -78,7 +310,7 @@ $success = isset($_GET['success']) && $_GET['success'] == 1;
 $message = $success ? 'Order updated successfully!' : '';
 
 // Get order details
-$stmt = $conn->prepare('SELECT o.*, c.name as customer_name, c.phone as customer_phone, c.category as customer_category 
+$stmt = $conn->prepare('SELECT o.*, c.name as customer_name, c.phone as customer_phone, c.email as customer_email, c.category as customer_category 
                        FROM orders o 
                        LEFT JOIN customers c ON o.customer_id = c.id 
                        WHERE o.id = ?');
@@ -114,12 +346,24 @@ foreach ($items as $item) {
     $subtotal += $item['quantity'] * $item['unit_price'];
 }
 
+// Calculate discount
+$discount = 0;
+if ($subtotal >= 1000) {
+    $discount = $subtotal * 0.15;
+} elseif ($subtotal >= 500) {
+    $discount = $subtotal * 0.10;
+} elseif ($subtotal >= 100) {
+    $discount = $subtotal * 0.05;
+}
+
+$total = $subtotal - $discount;
+
 $total_paid = 0;
 foreach ($payments as $payment) {
     $total_paid += $payment['amount'];
 }
 
-$remaining = $order['total_amount'] - $total_paid;
+$remaining = ($order['status'] === 'paid') ? 0 : $total - $total_paid;
 ?>
 
 <!DOCTYPE html>
@@ -147,13 +391,22 @@ $remaining = $order['total_amount'] - $total_paid;
                                     $status_colors = [
                                         'pending' => 'bg-yellow-100 text-yellow-800',
                                         'in_progress' => 'bg-blue-100 text-blue-800',
+                                        'paid' => 'bg-green-100 text-green-800',
                                         'completed' => 'bg-green-100 text-green-800',
                                         'cancelled' => 'bg-red-100 text-red-800'
                                     ];
                                     $color = $status_colors[$order['status']] ?? 'bg-gray-100 text-gray-800';
+                                    
+                                    // Get display label for status
+                                    $status_label = $order['status'];
+                                    if ($status_label === 'in_progress') {
+                                        $status_label = 'on the way';
+                                    } elseif ($status_label === 'completed') {
+                                        $status_label = 'delivered';
+                                    }
                                 ?>
                                 <span class="px-4 py-2 rounded-full text-sm font-bold <?php echo $color; ?>">
-                                    <?php echo ucwords(str_replace('_', ' ', $order['status'])); ?>
+                                    <?php echo ucwords(str_replace('_', ' ', $status_label)); ?>
                                 </span>
                             </div>
                             <?php if (!$is_edit_mode): ?>
@@ -196,6 +449,10 @@ $remaining = $order['total_amount'] - $total_paid;
                                     <p class="text-gray-900 mt-1"><?php echo htmlspecialchars($order['customer_phone']); ?></p>
                                 </div>
                                 <div>
+                                    <p class="text-sm font-semibold text-gray-600">Email</p>
+                                    <p class="text-gray-900 mt-1"><?php echo htmlspecialchars($order['customer_email'] ?? '--'); ?></p>
+                                </div>
+                                <div>
                                     <p class="text-sm font-semibold text-gray-600">Category</p>
                                     <p class="text-gray-900 mt-1"><?php echo htmlspecialchars($order['customer_category'] ?? '--'); ?></p>
                                 </div>
@@ -222,10 +479,11 @@ $remaining = $order['total_amount'] - $total_paid;
                                     <label class="block text-sm font-semibold text-gray-600 mb-2">Status</label>
                                     <select name="status" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500">
                                         <option value="pending" <?php echo $order['status'] === 'pending' ? 'selected' : ''; ?>>Pending</option>
-                                        <option value="in_progress" <?php echo $order['status'] === 'in_progress' ? 'selected' : ''; ?>>In Progress</option>
-                                        <option value="completed" <?php echo $order['status'] === 'completed' ? 'selected' : ''; ?>>Completed</option>
+                                        <option value="in_progress" <?php echo $order['status'] === 'in_progress' ? 'selected' : ''; ?>>On The Way</option>
+                                        <option value="completed" <?php echo $order['status'] === 'completed' ? 'selected' : ''; ?>>Delivered</option>
                                         <option value="cancelled" <?php echo $order['status'] === 'cancelled' ? 'selected' : ''; ?>>Cancelled</option>
                                     </select>
+                                    <input type="hidden" name="old_status" value="<?php echo htmlspecialchars($order['status']); ?>">
                                 </div>
                             <?php endif; ?>
                         </div>
@@ -310,6 +568,27 @@ $remaining = $order['total_amount'] - $total_paid;
                                 <?php endif; ?>
                             </div>
                         <?php endif; ?>
+
+                        <?php if ($is_edit_mode): ?>
+                            <!-- Add Payment -->
+                            <div class="bg-white rounded-xl shadow-md p-8 mb-8">
+                                <h3 class="text-lg font-bold text-gray-900 mb-6">Add Payment</h3>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">Payment Amount</label>
+                                        <input type="number" name="payment_amount" step="0.01" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500" placeholder="0.00">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">Payment Method</label>
+                                        <select name="payment_method" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500">
+                                            <option value="cash">Cash</option>
+                                            <option value="card">Card</option>
+                                            <option value="bank">Bank Transfer</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php endif; ?>
                         
                         <?php if ($is_edit_mode): ?>
                             </form>
@@ -326,9 +605,13 @@ $remaining = $order['total_amount'] - $total_paid;
                                     <span class="text-gray-700">Subtotal:</span>
                                     <span class="font-semibold text-gray-900">₱<?php echo number_format($subtotal, 2); ?></span>
                                 </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-700">Discount:</span>
+                                    <span class="font-semibold text-green-600">₱<?php echo number_format($discount, 2); ?></span>
+                                </div>
                                 <div class="flex justify-between border-t pt-4">
                                     <span class="font-bold text-gray-900 text-lg">Total:</span>
-                                    <span class="text-2xl font-bold text-teal-600">₱<?php echo number_format($order['total_amount'], 2); ?></span>
+                                    <span class="text-2xl font-bold text-teal-600">₱<?php echo number_format($total, 2); ?></span>
                                 </div>
                             </div>
 
@@ -343,7 +626,7 @@ $remaining = $order['total_amount'] - $total_paid;
                                 </div>
                             </div>
 
-                            <?php if ($total_paid > 0 && $total_paid < $order['total_amount']): ?>
+                            <?php if ($total_paid > 0 && $total_paid < $total): ?>
                                 <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
                                     <p class="text-sm font-semibold text-yellow-900 mb-1">Payment Status</p>
                                     <p class="text-sm text-yellow-800">Partial payment received. Balance pending.</p>

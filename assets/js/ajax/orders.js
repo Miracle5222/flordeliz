@@ -3,9 +3,11 @@
         const customerSelect = document.getElementById('customerSelect');
         const customerName = document.getElementById('customerName');
         const customerPhone = document.getElementById('customerPhone');
+        const customerEmail = document.getElementById('customerEmail');
         const customerCategory = document.getElementById('customerCategory');
         const productSelect = document.getElementById('productSelect');
         const quantity = document.getElementById('quantity');
+        const companyTypeSelect = document.getElementById('companyType');
         const downpaymentInput = document.getElementById('downpayment');
         const form = document.getElementById('createOrderForm');
 
@@ -24,13 +26,41 @@
             customerSelect.addEventListener('change', function () {
                 if (this.value) {
                     const option = this.options[this.selectedIndex];
-                    customerName.value = option.dataset.name;
-                    customerPhone.value = option.dataset.phone;
-                    customerCategory.value = option.dataset.category;
+
+                    // Get values from data attributes
+                    const nameValue = option.dataset.name || '';
+                    const phoneValue = option.dataset.phone || '';
+                    const emailValue = option.dataset.email || '';
+                    const categoryValue = option.dataset.category || '';
+
+                    // Set form field values
+                    customerName.value = nameValue;
+                    customerPhone.value = phoneValue;
+                    customerCategory.value = categoryValue;
+
+                    // Set email field - ensure it gets set
+                    if (customerEmail) {
+                        customerEmail.value = emailValue;
+                        customerEmail.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
+
                     customerName.setAttribute('data-customer-id', this.value);
+
+                    // Debug log
+                    console.log('Customer selected:', {
+                        id: this.value,
+                        selectedName: nameValue,
+                        selectedPhone: phoneValue,
+                        selectedEmail: emailValue,
+                        selectedCategory: categoryValue,
+                        emailFieldExists: !!customerEmail,
+                        emailFieldValue: customerEmail?.value,
+                        dataEmailAttr: option.dataset.email
+                    });
                 } else {
                     customerName.value = '';
                     customerPhone.value = '';
+                    customerEmail.value = '';
                     customerCategory.value = '';
                     customerName.removeAttribute('data-customer-id');
                 }
@@ -55,6 +85,7 @@
                 return;
             }
 
+            // Check if product already exists
             // Check if product already exists
             const existing = orderProducts.find(p => p.product_id == productId);
             if (existing) {
@@ -169,6 +200,16 @@
                     return;
                 }
 
+                if (!customerEmail.value.trim()) {
+                    showAlert('Please enter customer email for order updates', 'error');
+                    return;
+                }
+
+                if (!customerName.getAttribute('data-customer-id') && !customerCategory.value.trim()) {
+                    showAlert('Please select a customer category', 'error');
+                    return;
+                }
+
                 if (orderProducts.length === 0) {
                     showAlert('Please add at least one product', 'error');
                     return;
@@ -184,7 +225,9 @@
                 formData.append('customer_id', customerName.getAttribute('data-customer-id') || '');
                 formData.append('customer_name', customerName.value);
                 formData.append('customer_phone', customerPhone.value);
+                formData.append('customer_email', customerEmail.value);
                 formData.append('customer_category', customerCategory.value);
+                formData.append('company_type', companyTypeSelect ? companyTypeSelect.value : '');
                 formData.append('delivery_date', document.getElementById('deliveryDate').value);
                 formData.append('downpayment', downpaymentInput.value || 0);
                 formData.append('notes', document.getElementById('notes').value);

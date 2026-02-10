@@ -1,0 +1,355 @@
+# TRANSACTION DATABASE SCHEMA
+
+## Database Tables Involved in Transactions
+
+### 1. inventory_transactions (Stock Movements)
+```
+Table: inventory_transactions
+├─ id (int) - Primary key
+├─ product_id (int) - FK to inventory table
+├─ material_id (int) - FK to inventory_materials table
+├─ transaction_type (enum) - 'in', 'out', 'adjustment'
+├─ quantity (int) - Number of units
+├─ notes (text) - Description
+├─ created_by (int) - FK to users table
+└─ created_at (timestamp) - Auto timestamp
+
+Example Record:
+{
+  "id": 1,
+  "product_id": 2,
+  "material_id": null,
+  "transaction_type": "out",
+  "quantity": 5,
+  "notes": "Sold 5 pcs of Colored Bondpaper",
+  "created_by": 1,
+  "created_at": "2026-02-04 10:30:45"
+}
+```
+
+### 2. sales_transactions (Direct Sales Records)
+```
+Table: sales_transactions
+├─ id (int) - Primary key
+├─ transaction_date (date) - Date of sale
+├─ total_sales (decimal) - Sale amount
+├─ notes (text) - Description
+├─ created_by (int) - FK to users table
+└─ created_at (timestamp) - Auto timestamp
+
+Example Record:
+{
+  "id": 1,
+  "transaction_date": "2026-02-04",
+  "total_sales": 2500.00,
+  "notes": "Sale recorded for Customer Order",
+  "created_by": 1,
+  "created_at": "2026-02-04 10:30:45"
+}
+```
+
+### 3. inventory (Products/Materials)
+```
+Table: inventory
+├─ id (int) - Primary key
+├─ product_name (varchar) - Product name
+├─ category (enum) - 'Products' or 'Materials/Supplies'
+├─ quantity (int) - Current stock
+├─ unit (varchar) - Unit of measure
+├─ unit_price (decimal) - Price per unit
+├─ reorder_level (int) - Low stock threshold
+├─ supplier (varchar) - Supplier name
+├─ created_at (timestamp)
+└─ updated_at (timestamp)
+
+Example Record:
+{
+  "id": 2,
+  "product_name": "Colored Bondpaper",
+  "category": "Materials/Supplies",
+  "quantity": 495,
+  "unit": "pcs",
+  "unit_price": 10.00,
+  "reorder_level": 100,
+  "supplier": "Star Paper Corporation"
+}
+```
+
+### 4. inventory_materials (Alternative Material Table)
+```
+Table: inventory_materials
+├─ id (int) - Primary key
+├─ name (varchar) - Material name
+├─ material_type (enum) - 'paper', 'ink', 'cardboard', 'binding', 'other'
+├─ unit (varchar) - Unit of measure
+├─ unit_price (decimal) - Price per unit
+├─ current_stock (int) - Current quantity
+└─ created_at (timestamp)
+
+Example Record:
+{
+  "id": 1,
+  "name": "Carbonless Paper",
+  "material_type": "paper",
+  "unit": "rem",
+  "unit_price": 400.00,
+  "current_stock": 1
+}
+```
+
+### 5. users (Staff/Admin Records)
+```
+Table: users
+├─ id (int) - Primary key
+├─ first_name (varchar) - First name
+├─ last_name (varchar) - Last name
+├─ email (varchar) - Email address
+├─ role (enum) - 'staff' or 'admin'
+├─ password (varchar) - Hashed password
+├─ is_active (tinyint) - 1=active, 0=inactive
+└─ created_at (timestamp)
+
+Example Record:
+{
+  "id": 1,
+  "first_name": "Staff",
+  "last_name": "User",
+  "email": "staff@gmail.com",
+  "role": "staff",
+  "is_active": 1
+}
+```
+
+### 6. sales (Order Records)
+```
+Table: sales
+├─ id (int) - Primary key
+├─ order_number (varchar) - Unique order ID
+├─ customer_id (int) - FK to customers
+├─ order_date (datetime) - When ordered
+├─ delivery_date (date) - When to deliver
+├─ delivery_address (text) - Where to deliver
+├─ status (enum) - 'pending', 'paid', 'completed'
+├─ total_amount (decimal) - Final amount
+└─ created_at (timestamp)
+
+Example Record:
+{
+  "id": 1,
+  "order_number": "ORD-20260204120530",
+  "customer_id": 10,
+  "order_date": "2026-02-04 12:05:30",
+  "delivery_date": "2026-02-10",
+  "delivery_address": "123 Main St",
+  "status": "paid",
+  "total_amount": 5000.00
+}
+```
+
+### 7. sale_items (Items in Orders)
+```
+Table: sale_items
+├─ id (int) - Primary key
+├─ sale_id (int) - FK to sales
+├─ product_id (int) - FK to inventory
+├─ quantity (int) - Quantity ordered
+├─ unit_price (decimal) - Price per unit
+└─ total_price (decimal) - Quantity × unit_price
+
+Example Record:
+{
+  "id": 1,
+  "sale_id": 1,
+  "product_id": 2,
+  "quantity": 10,
+  "unit_price": 350.00,
+  "total_price": 3500.00
+}
+```
+
+---
+
+## Relationship Diagram
+
+```
+inventory_transactions
+├─ product_id → inventory(id)
+├─ material_id → inventory_materials(id)
+└─ created_by → users(id)
+
+sales_transactions
+└─ created_by → users(id)
+
+sales
+├─ customer_id → customers(id)
+└─ created_at (implicit timing)
+
+sale_items
+├─ sale_id → sales(id)
+└─ product_id → inventory(id)
+
+inventory
+└─ automatic: quantity updated when sales created
+```
+
+---
+
+## Transaction Creation Flow
+
+### SCENARIO: Customer Buys Item
+
+```
+1. SALES MODULE RECEIVES INPUT
+   ├─ Product: Colored Bondpaper (id=2)
+   ├─ Quantity: 5
+   ├─ Price: ₱10 per unit
+   └─ Timestamp: NOW()
+
+2. DATABASE INSERTS OCCUR
+
+   A) INSERT INTO sales_transactions
+      ├─ transaction_date: "2026-02-04"
+      ├─ total_sales: 50.00
+      ├─ notes: "Sale recorded for Colored Bondpaper"
+      └─ created_by: 1
+
+   B) INSERT INTO inventory_transactions
+      ├─ product_id: 2
+      ├─ transaction_type: "out"
+      ├─ quantity: 5
+      ├─ notes: "Sold 5 pcs of Colored Bondpaper"
+      └─ created_by: 1
+
+   C) UPDATE inventory
+      └─ SET quantity = quantity - 5
+          WHERE id = 2
+
+3. VERIFICATION
+   inventory.quantity: 500 → 495 ✓
+   inventory_transactions: 1 new record ✓
+   sales_transactions: 1 new record ✓
+
+4. VISIBLE IN UI
+   Transactions → Inventory Tab: Shows 'out' type
+   Transactions → Sales Tab: Shows ₱50.00 sale
+```
+
+---
+
+## SQL Queries Used in Transactions Page
+
+### Get Inventory Transactions
+```sql
+SELECT it.id, it.transaction_type, it.quantity, it.notes, it.created_at,
+       p.product_name, im.name as material_name, 
+       u.first_name, u.last_name
+FROM inventory_transactions it
+LEFT JOIN inventory p ON it.product_id = p.id
+LEFT JOIN inventory_materials im ON it.material_id = im.id
+LEFT JOIN users u ON it.created_by = u.id
+ORDER BY it.created_at DESC
+```
+
+### Get Sales Transactions
+```sql
+SELECT st.id, st.transaction_date, st.total_sales, st.notes,
+       u.first_name, u.last_name
+FROM sales_transactions st
+LEFT JOIN users u ON st.created_by = u.id
+ORDER BY st.transaction_date DESC
+```
+
+### Get Recent Sales Overview
+```sql
+SELECT s.id, s.sale_date, s.total_amount, 
+       COUNT(si.id) AS item_count
+FROM sales s
+LEFT JOIN sale_items si ON s.id = si.sale_id
+GROUP BY s.id
+ORDER BY s.sale_date DESC
+LIMIT 5
+```
+
+### Calculate Statistics
+```sql
+-- Count transactions by type
+SELECT transaction_type, COUNT(*) as count
+FROM inventory_transactions
+GROUP BY transaction_type
+
+-- Sum sales amounts
+SELECT SUM(total_sales) as total_revenue
+FROM sales_transactions
+
+-- Average sale
+SELECT AVG(total_sales) as average_sale
+FROM sales_transactions
+```
+
+---
+
+## Data Integrity Rules
+
+### Automatic Enforcement
+- ✓ Foreign key constraints
+- ✓ NOT NULL on required fields
+- ✓ Auto timestamps (created_at, updated_at)
+- ✓ Numeric validation on amounts/quantities
+
+### Application Logic
+- ✓ User ID from SESSION (cannot be manipulated)
+- ✓ Timestamp from NOW() (server time)
+- ✓ Inventory adjusted immediately after sale
+- ✓ All fields logged for audit trail
+
+### No Direct Manipulation
+- ❌ Users cannot directly INSERT into transactions
+- ❌ Transactions created only via application
+- ❌ Cannot delete or modify transaction records
+- ❌ Ensures complete audit trail
+
+---
+
+## Backup Considerations
+
+### Critical Tables for Backup
+1. inventory_transactions (daily/weekly)
+2. sales_transactions (daily/weekly)
+3. sales (daily/weekly)
+4. sale_items (daily/weekly)
+5. inventory (real-time or daily)
+6. inventory_materials (weekly)
+
+### Backup Strategy
+- Daily backup of transaction tables
+- Weekly full database backup
+- Monthly verification of backups
+- Archive old transactions quarterly (optional)
+
+---
+
+## Performance Notes
+
+### Indexes on Key Fields
+```
+inventory_transactions:
+- PRIMARY KEY on id
+- INDEX on created_by (for user filtering)
+- INDEX on transaction_type (for filtering)
+
+sales_transactions:
+- PRIMARY KEY on id
+- INDEX on transaction_date (for date filtering)
+- INDEX on created_by (for user filtering)
+
+inventory:
+- PRIMARY KEY on id
+- INDEX on product_name (for search)
+```
+
+### Query Performance
+- Indexed lookups: Fast (<100ms)
+- Full table scans: 0-1 second for < 10,000 records
+- JOINs: Efficient with foreign keys
+- GROUP BY: Fast with proper indexes
+

@@ -1,0 +1,265 @@
+# TRANSACTION EXAMPLES & DATA FLOW
+
+## Sample Transaction Flows
+
+### EXAMPLE 1: Customer Orders Products (Orders Module)
+```
+⚠️ NOTE: Orders module creates SALES records (orders table)
+NOT recorded in sales_transactions (direct sales only)
+Orders are for scheduled deliveries, not immediate sales.
+
+What Gets Created:
+├─ orders table: ORD-20260204120530
+├─ order_items table: Items in order
+├─ payments table: Downpayment if applicable
+└─ NO inventory_transactions (inventory untouched until pickup)
+```
+
+### EXAMPLE 2: Direct Sale/Counter Sale (Sales Module) ✓
+```
+Staff → Sales → Create Sale
+Sells 5 units of "Colored Bondpaper" for ₱50.00
+
+Automatically Creates:
+├─ inventory_transactions
+│  ├─ Type: out
+│  ├─ Product: Colored Bondpaper
+│  ├─ Quantity: 5
+│  ├─ Notes: "Sold 5 pcs of Colored Bondpaper"
+│  └─ Created By: Staff User (ID)
+│
+└─ sales_transactions
+   ├─ Date: Feb 04, 2026
+   ├─ Amount: ₱50.00
+   ├─ Notes: "Sale recorded for Colored Bondpaper"
+   └─ Created By: Staff User (ID)
+
+Visible In: Transactions → Sales Tab & Inventory Tab
+```
+
+### EXAMPLE 3: Adding New Inventory Item (Inventory Module) ✓
+```
+Staff → Inventory → Add New Item
+Adds 100 units of "Hardbound Book"
+
+Automatically Creates:
+├─ inventory table: New product record
+└─ inventory_transactions
+   ├─ Type: in
+   ├─ Product: Hardbound Book
+   ├─ Quantity: 100
+   ├─ Notes: "Added new inventory item: Hardbound Book"
+   └─ Created By: Staff User (ID)
+
+Visible In: Transactions → Inventory Tab
+```
+
+### EXAMPLE 4: Inventory Adjustment (Manual/Admin)
+```
+Correction needed: 10 units damaged
+Admin → Inventory → Adjust (if available)
+
+Creates:
+├─ inventory_transactions
+│  ├─ Type: adjustment
+│  ├─ Product: Product Name
+│  ├─ Quantity: -10
+│  ├─ Notes: "Damaged units removed"
+│  └─ Created By: Admin User
+
+Visible In: Transactions → Inventory Tab (yellow badge)
+```
+
+---
+
+## Current Sample Data in System
+
+### Inventory Transactions Available
+Based on demo data inserted:
+
+**Example Records:**
+```
+1. Stock In - Hardbound Book (98 units)
+   - Added from initial inventory setup
+   - Type: in | Quantity: 98 | Date: Jan 07, 2026
+
+2. Stock In - Colored Bondpaper (500 units)
+   - Added from initial inventory setup
+   - Type: in | Quantity: 500 | Date: Jan 07, 2026
+
+3. Stock Out - (Dependent on sales made)
+   - Shows when sales are recorded
+   - Type: out | Quantity: varies | Date: Recent
+```
+
+### Sales Transactions Available
+```
+1. Sale Transaction #1
+   - Date: Feb 04, 2026
+   - Amount: ₱XXX.XX (varies by input)
+   - Notes: "Sale recorded for [product]"
+   - Created By: Staff User
+
+2. Sale Transaction #2
+   - Date: Feb 04, 2026
+   - Amount: ₱XXX.XX
+   - Notes: "Sale recorded..."
+   - Created By: Staff User
+```
+
+---
+
+## How to Generate More Sample Transactions
+
+### Method 1: Add New Inventory Item
+```
+1. Login as Staff
+2. Go to: Staff → Inventory → Add New Item
+3. Fill form:
+   - Product Name: "Test Paper"
+   - Category: Materials/Supplies
+   - Quantity: 50
+   - Unit: pcs
+   - Unit Price: 15.00
+4. Click Add
+5. Check Transactions → See Stock In record created
+```
+
+### Method 2: Record a Sale
+```
+1. Login as Staff
+2. Go to: Staff → Sales → Create Sale
+3. Fill form:
+   - Select product
+   - Enter quantity
+   - Enter sale date
+4. Click Save
+5. Check Transactions → See both:
+   - Sales transaction record
+   - Inventory 'out' transaction record
+```
+
+---
+
+## What Should Show In Transactions Page
+
+### Inventory Tab Should Show:
+```
+✓ Dates ranging from when items were added
+✓ Types: In, Out, Adjustment (with correct colors)
+✓ Item names from inventory
+✓ Quantities that match what was added/sold
+✓ Detailed notes describing action
+✓ Staff member names who recorded it
+```
+
+### Sales Tab Should Show:
+```
+✓ Transaction IDs (unique numbers)
+✓ Dates of sales
+✓ Amounts in Philippine Peso (₱)
+✓ Description notes
+✓ Staff member names
+✓ Statistics: Total sales, revenue, average
+```
+
+### Recent Sales Summary Should Show:
+```
+✓ Last 5 sales by date
+✓ Item counts per sale
+✓ Total amounts
+✓ Latest first
+```
+
+---
+
+## Database Query Examples
+
+### See All Inventory Transactions
+```sql
+SELECT it.id, it.transaction_type, it.quantity, it.notes, 
+       it.created_at, p.product_name, u.first_name, u.last_name
+FROM inventory_transactions it
+LEFT JOIN inventory p ON it.product_id = p.id
+LEFT JOIN users u ON it.created_by = u.id
+ORDER BY it.created_at DESC;
+```
+
+### See All Sales Transactions
+```sql
+SELECT st.id, st.transaction_date, st.total_sales, st.notes,
+       u.first_name, u.last_name
+FROM sales_transactions st
+LEFT JOIN users u ON st.created_by = u.id
+ORDER BY st.transaction_date DESC;
+```
+
+### See Statistics
+```sql
+-- Total sales amount
+SELECT SUM(total_sales) as total_revenue FROM sales_transactions;
+
+-- Transaction count by type
+SELECT transaction_type, COUNT(*) as count 
+FROM inventory_transactions 
+GROUP BY transaction_type;
+```
+
+---
+
+## Troubleshooting Transactions
+
+### No Transactions Visible?
+1. ❓ Have you added any inventory items?
+   → Go to Inventory → Add Item to create Stock In transaction
+
+2. ❓ Have you recorded any sales?
+   → Go to Sales → Create Sale to create Sales & Stock Out transactions
+
+3. ❓ Are you viewing as correct user?
+   → Staff sees only their own data
+   → Admin sees all data
+
+### Wrong Data Showing?
+1. Check product names in Inventory module
+2. Verify inventory_transactions table directly
+3. Confirm sales_transactions table has records
+
+### Amounts Not Calculating?
+1. Check sales module records transaction_date vs today's date
+2. Verify total_sales field has numeric value
+3. Confirm number_format() in PHP (should show ₱ symbol)
+
+---
+
+## System Behavior
+
+### Automatic Actions
+| When | Creates |
+|------|---------|
+| Add inventory item | inventory_transactions (type='in') |
+| Record a sale | sales_transactions + inventory_transactions (type='out') |
+| Manual adjustment | inventory_transactions (type='adjustment') |
+
+### Cannot Happen
+- ❌ Deleting transactions (audit trail)
+- ❌ Editing transaction amounts (immutable)
+- ❌ Creating sales without inventory link
+- ❌ Inventory changes without transaction record
+
+### Always Recorded
+- ✅ Timestamp (created_at)
+- ✅ User (created_by)
+- ✅ Description (notes)
+- ✅ Quantity/Amount
+- ✅ Type of transaction
+
+---
+
+## Data Retention
+
+**How Long Data Kept:** Indefinitely (no auto-delete)
+**Audit Trail:** Permanent and immutable
+**Backups:** Should be part of database backup strategy
+**Access:** Staff/Admin only (via login)
+

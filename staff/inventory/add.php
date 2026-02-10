@@ -37,6 +37,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->bind_param('ssisdis', $product_name, $category, $quantity, $unit, $unit_price, $reorder_level, $supplier);
         
         if ($stmt->execute()) {
+            $inventory_id = $stmt->insert_id;
+            
+            // Record inventory transaction for 'in'
+            $trans_stmt = $conn->prepare('INSERT INTO inventory_transactions (product_id, transaction_type, quantity, notes, created_by) VALUES (?, ?, ?, ?, ?)');
+            $trans_type = 'in';
+            $notes = "Added new inventory item: " . $product_name;
+            $created_by = $_SESSION['user_id'] ?? null;
+            $trans_stmt->bind_param('isisi', $inventory_id, $trans_type, $quantity, $notes, $created_by);
+            $trans_stmt->execute();
+            $trans_stmt->close();
+            
             $message = 'Inventory item added successfully!';
             $product_name = '';
             $category = '';

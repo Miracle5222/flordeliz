@@ -55,28 +55,7 @@
     $today_sales = $sales_data['today_sales'] ?? 0;
 
     // ========== CURRENT CLOCK STATUS ==========
-    $clock_stmt = $conn->prepare("
-        SELECT clock_in, clock_out, hours_worked
-        FROM attendance
-        WHERE employee_id = ? AND attendance_date = ?
-        ORDER BY id DESC LIMIT 1
-    ");
-    $clock_stmt->bind_param('is', $employee_id, $today);
-    $clock_stmt->execute();
-    $clock_data = $clock_stmt->get_result()->fetch_assoc();
-    $clock_stmt->close();
-    
-    $clock_status = 'Not Clocked In';
-    $clock_time = '--:--';
-    if ($clock_data) {
-        if (!$clock_data['clock_out']) {
-            $clock_status = 'Clocked In';
-            $clock_time = date('H:i', strtotime($clock_data['clock_in']));
-        } else {
-            $clock_status = 'Clocked Out';
-            $clock_time = 'Hours: ' . $clock_data['hours_worked'];
-        }
-    }
+    // Removed clock status display
 
     // ========== LOW STOCK ITEMS ==========
     $low_stmt = $conn->prepare("SELECT COUNT(*) AS low_count FROM inventory WHERE quantity < reorder_level");
@@ -101,7 +80,7 @@
             </div>
 
     <!-- Quick Stats -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
             <div class="bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition">
                 <div class="flex items-center justify-between">
                     <div>
@@ -140,19 +119,6 @@
                     </div>
                 </div>
             </div>
-
-            <div class="bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-gray-600 text-sm font-semibold">Clock Status</p>
-                        <p class="text-3xl font-bold text-teal-600 mt-2"><?php echo htmlspecialchars($clock_time); ?></p>
-                        <p class="text-xs <?php echo strpos($clock_status, 'In') !== false ? 'text-green-600' : 'text-gray-500'; ?> mt-1"><?php echo htmlspecialchars($clock_status); ?></p>
-                    </div>
-                    <div class="w-12 h-12 bg-teal-100 rounded-lg flex items-center justify-center">
-                        <svg class="w-6 h-6 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                    </div>
-                </div>
-            </div>
         </div>
 
         <!-- Features Grid -->
@@ -179,14 +145,6 @@
                 </div>
                 <h3 class="text-lg font-bold text-gray-900 mb-2">Payments</h3>
                 <p class="text-gray-600">Record and track customer payments.</p>
-            </a>
-
-            <a href="/staff/clock.php" class="bg-white p-8 rounded-xl shadow-md hover:shadow-lg transition cursor-pointer">
-                <div class="w-12 h-12 bg-teal-100 rounded-lg flex items-center justify-center mb-4">
-                    <svg class="w-6 h-6 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                </div>
-                <h3 class="text-lg font-bold text-gray-900 mb-2">Clock In/Out</h3>
-                <p class="text-gray-600">Record your attendance and work hours.</p>
             </a>
 
             <div class="bg-white p-8 rounded-xl shadow-md hover:shadow-lg transition">

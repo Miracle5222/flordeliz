@@ -33,6 +33,41 @@ if (!$item) {
 $message = '';
 $error = '';
 
+// Handle damage reporting
+if (isset($_POST['report_damage'])) {
+    $damaged_quantity = intval($_POST['damaged_quantity'] ?? 0);
+    
+    if ($damaged_quantity <= 0) {
+        $error = 'Please enter a valid number of damaged items.';
+    } elseif ($damaged_quantity > $item['quantity']) {
+        $error = 'Damaged quantity cannot exceed current stock (' . $item['quantity'] . ').';
+    } else {
+        // Deduct damaged items from quantity
+        $new_quantity = $item['quantity'] - $damaged_quantity;
+        
+        // Update inventory
+        $stmt = $conn->prepare('UPDATE inventory SET quantity = ? WHERE id = ?');
+        $stmt->bind_param('ii', $new_quantity, $item_id);
+        
+        if ($stmt->execute()) {
+            // Record inventory transaction for damage
+            $trans_stmt = $conn->prepare('INSERT INTO inventory_transactions (product_id, transaction_type, quantity, notes, created_by) VALUES (?, ?, ?, ?, ?)');
+            $trans_type = 'out';
+            $notes = "Damage reported: " . $damaged_quantity . " unit(s) removed. Stock reduced from " . $item['quantity'] . " to " . $new_quantity . ".";
+            $created_by = $_SESSION['user_id'] ?? null;
+            $trans_stmt->bind_param('isisi', $item_id, $trans_type, $damaged_quantity, $notes, $created_by);
+            $trans_stmt->execute();
+            $trans_stmt->close();
+            
+            $message = 'Damage recorded successfully! Stock updated from ' . $item['quantity'] . ' to ' . $new_quantity . '.';
+            $item['quantity'] = $new_quantity;
+        } else {
+            $error = 'Failed to record damage. Please try again.';
+        }
+        $stmt->close();
+    }
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $product_name = $_POST['product_name'] ?? '';
     $category = $_POST['category'] ?? '';
@@ -49,6 +84,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->bind_param('ssisdisi', $product_name, $category, $quantity, $unit, $unit_price, $reorder_level, $supplier, $item_id);
         
         if ($stmt->execute()) {
+            // Record inventory transaction if quantity changed
+            if ($quantity != $item['quantity']) {
+                $quantity_diff = $quantity - $item['quantity'];
+                $trans_stmt = $conn->prepare('INSERT INTO inventory_transactions (product_id, transaction_type, quantity, notes, created_by) VALUES (?, ?, ?, ?, ?)');
+                $trans_type = 'adjustment';
+                $notes = "Quantity adjusted from " . $item['quantity'] . " to " . $quantity . " (" . ($quantity_diff > 0 ? '+' : '') . $quantity_diff . ")";
+                $created_by = $_SESSION['user_id'] ?? null;
+                $trans_stmt->bind_param('isisi', $item_id, $trans_type, $quantity_diff, $notes, $created_by);
+                $trans_stmt->execute();
+                $trans_stmt->close();
+            }
+            
             $message = 'Inventory item updated successfully!';
             $item['product_name'] = $product_name;
             $item['category'] = $category;
@@ -155,8 +202,61 @@ $conn->close();
                         </div>
                     </form>
                 </div>
-            </div>
+                <!-- Damage Report Section -->
+                <div class="bg-white rounded-xl shadow-md p-8 mt-8">
+                    <h3 class="text-2xl font-bold text-gray-900 mb-2">Report Damaged Items</h3>
+                    <p class="text-gray-600 mb-6">Record and deduct damaged items from inventory</p>
+                    
+                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
+                        <p class="text-gray-700 text-sm">
+                            <strong>Current Stock:</strong> <span class="font-bold text-lg text-gray-900"><?php echo $item['quantity']; ?></span> <?php echo htmlspecialchars($item['unit']); ?>
+                        </p>
+                    </div>
+
+                    <form method="POST">
+                        <div class="grid grid-cols-2 gap-6 mb-6">
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">Number of Damaged Items *</label>
+                                <input type="number" name="damaged_quantity" id="damaged_quantity" placeholder="0" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500" min="1" max="<?php echo $item['quantity']; ?>" required>
+                                <p class="text-xs text-gray-500 mt-1">Maximum: <?php echo $item['quantity']; ?> <?php echo htmlspecialchars($item['unit']); ?></p>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">New Quantity (Preview)</label>
+                                <input type="text" id="new_quantity_preview" value="<?php echo $item['quantity']; ?>" class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700" readonly>
+                                <p class="text-xs text-gray-500 mt-1">Auto-calculated from damage count</p>
+                            </div>
+                        </div>
+
+                        <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
+                            <p class="text-gray-700 text-sm">
+                                <strong>Note:</strong> This action will permanently reduce the inventory quantity and create a transaction record. This action cannot be undone directly.
+                            </p>
+                        </div>
+
+                        <button type="submit" name="report_damage" class="w-full px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-semibold">Report Damage & Update Stock</button>
+                    </form>
+                </div>
+
+                        <button type=\"submit\" name=\"report_damage\" class=\"w-full px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-semibold\">Report Damage & Update Stock</button>
+                    </form>
+                </div>            </div>
         </div>
     </div>
+
+    <script>
+        // Auto-update new quantity preview
+        const damagedInput = document.getElementById('damaged_quantity');
+        const currentStock = <?php echo $item['quantity']; ?>;
+        const previewInput = document.getElementById('new_quantity_preview');
+
+        if (damagedInput && previewInput) {
+            damagedInput.addEventListener('input', function() {
+                const damagedQty = parseInt(this.value) || 0;
+                const newQty = currentStock - damagedQty;
+                previewInput.value = newQty >= 0 ? newQty : currentStock;
+            });
+        }
+    </script>
 </body>
 </html>

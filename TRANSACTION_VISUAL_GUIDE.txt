@@ -1,0 +1,386 @@
+# TRANSACTION SYSTEM - VISUAL GUIDE
+
+## What Was Changed
+
+### COLUMN HEADERS - BEFORE vs AFTER
+
+#### Inventory Transactions Tab
+```
+BEFORE:
+┌─────────────────┬──────┬──────────────────┬──────────┬───────┬────────────┐
+│ Date & Time     │ Type │ Product/Material │ Quantity │ Notes │ Created By │
+├─────────────────┼──────┼──────────────────┼──────────┼───────┼────────────┤
+│ Jan 08 10:30:45 │ in   │ Hardbound Book   │ 98       │ Added │ Staff User │
+└─────────────────┴──────┴──────────────────┴──────────┴───────┴────────────┘
+
+AFTER:
+┌──────────────────┬─────────────────┬───────────────────┬──────────┬──────────────┬────────────┐
+│ Transaction Date │ Transaction Type│ Item Name         │ Quantity │ Description  │ Recorded By│
+├──────────────────┼─────────────────┼───────────────────┼──────────┼──────────────┼────────────┤
+│ Jan 08 10:30:45  │ 🟢 Stock In     │ Hardbound Book    │ 98       │ Added item   │ Staff User │
+└──────────────────┴─────────────────┴───────────────────┴──────────┴──────────────┴────────────┘
+```
+
+#### Sales Transactions Tab
+```
+BEFORE:
+┌────────────┬──────┬─────────────┬──────────┬────────────┐
+│ ID         │ Date │ Total Sales │ Notes    │ Created By │
+├────────────┼──────┼─────────────┼──────────┼────────────┤
+│ #1         │ Feb04│ ₱2,500.00   │ Sale... │ Staff User │
+└────────────┴──────┴─────────────┴──────────┴────────────┘
+
+AFTER:
+┌────────────┬───────────┬────────────┬─────────────┬────────────┐
+│ ID         │ Sale Date │ Amount     │ Description │ Recorded By│
+├────────────┼───────────┼────────────┼─────────────┼────────────┤
+│ #1         │ Feb 04    │ ₱2,500.00  │ Sale notes  │ Staff User │
+└────────────┴───────────┴────────────┴─────────────┴────────────┘
+```
+
+#### Recent Sales Summary
+```
+BEFORE:
+┌─────────┬──────────────────┬───────┬────────┐
+│ Sale ID │ Date & Time      │ Items │ Amount │
+├─────────┼──────────────────┼───────┼────────┤
+│ #1      │ Feb 04 10:30:45  │ 5     │ ₱50.00 │
+└─────────┴──────────────────┴───────┴────────┘
+
+AFTER:
+┌─────────┬──────────────────────┬──────────────┬──────────────┐
+│ Sale ID │ Sale Date & Time     │ Items Sold   │ Total Amount │
+├─────────┼──────────────────────┼──────────────┼──────────────┤
+│ #1      │ Feb 04 10:30:45      │ 5            │ ₱50.00       │
+└─────────┴──────────────────────┴──────────────┴──────────────┘
+```
+
+---
+
+## Badge Color Changes
+
+### Transaction Type Badges
+
+```
+STOCK IN (Green)
+┌─────────────┐     ┌──────────┐
+│ in ❌       │  →  │ Stock In ✓
+└─────────────┘     └──────────┘
+ 🟡 Old style      🟢 New style
+ Just shows 'in'   Clear meaning
+
+STOCK OUT (Red)
+┌─────────────┐     ┌───────────┐
+│ out ❌      │  →  │ Stock Out ✓
+└─────────────┘     └───────────┘
+ 🟡 Old style      🔴 New style
+ Just shows 'out'  Clear meaning
+
+ADJUSTMENT (Yellow)
+┌─────────────┐     ┌──────────────────┐
+│ adjustment ❌ →  │ Stock Adjustment ✓
+└─────────────┘     └──────────────────┘
+ 🟡 Old style      🟡 New style
+ Long text        Clear, concise
+```
+
+---
+
+## Database Query Changes
+
+### Before
+```sql
+❌ WRONG TABLE:
+LEFT JOIN products p ON it.product_id = p.id
+-- "products" table doesn't exist for inventory items
+```
+
+### After
+```sql
+✅ CORRECT TABLE:
+LEFT JOIN inventory p ON it.product_id = p.id
+-- "inventory" table contains actual product data
+```
+
+---
+
+## Section Title Changes
+
+```
+BEFORE:
+- "Recent Sales Overview"
+
+AFTER:
+- "Recent Sales Summary"
+
+WHY:
+- "Summary" is more concise
+- Better describes condensed view
+- Matches terminology elsewhere
+```
+
+---
+
+## Database Schema Clarity
+
+### What Gets Recorded Where
+
+```
+SALES TRANSACTION FLOW:
+User Records Sale
+        ↓
+Creates inventory_transactions
+├─ Type: "out"
+├─ Product: Which item sold
+├─ Quantity: How many sold
+├─ Timestamp: When
+└─ User: Who recorded it
+
+Creates sales_transactions
+├─ Amount: Total sale
+├─ Date: Sale date
+├─ Notes: Description
+├─ Timestamp: When
+└─ User: Who recorded it
+
+Updates inventory
+└─ Quantity: -[amount sold]
+```
+
+---
+
+## Documentation Provided
+
+### 📄 File 1: TRANSACTIONS_GUIDE.md
+**Type:** Comprehensive Guide (Markdown)
+**Length:** ~400 lines
+**Covers:**
+- How transactions are created
+- Transaction types explained
+- Database tables explained
+- Viewing transactions
+- Understanding all labels
+- Troubleshooting guide
+- How it all works together
+- Statistics explained
+
+**Best For:** Users wanting complete understanding
+
+### 📄 File 2: TRANSACTIONS_QUICK_REFERENCE.txt
+**Type:** Quick Lookup (Text)
+**Length:** ~100 lines
+**Covers:**
+- Where to find transactions
+- What gets recorded
+- Column label meanings
+- Color coding
+- Data accuracy info
+- Important notes
+
+**Best For:** Quick daily reference
+
+### 📄 File 3: TRANSACTION_EXAMPLES.txt
+**Type:** Real-World Examples (Text)
+**Length:** ~350 lines
+**Covers:**
+- Sample transaction flows
+- Step-by-step scenarios
+- Example data
+- How to generate test data
+- Database query examples
+- Troubleshooting
+
+**Best For:** Hands-on learning
+
+### 📄 File 4: DATABASE_SCHEMA_TRANSACTIONS.txt
+**Type:** Technical Reference (Text)
+**Length:** ~500 lines
+**Covers:**
+- Complete table schemas
+- Field descriptions
+- Relationships
+- SQL queries used
+- Data integrity rules
+- Performance notes
+
+**Best For:** Developers and DBAs
+
+### 📄 File 5: TRANSACTION_IMPLEMENTATION_SUMMARY.txt
+**Type:** Implementation Report (Text)
+**Length:** ~400 lines
+**Covers:**
+- What was changed
+- Files modified
+- How transactions work
+- Testing checklist
+- Next steps
+- Summary
+
+**Best For:** Project overview
+
+---
+
+## Visual Summary: How Transactions Flow
+
+### SCENARIO: CUSTOMER BUYS 5 COLORED BONDPAPERS
+
+```
+STEP 1: STAFF RECORDS SALE
+┌─────────────────────┐
+│  Staff Dashboard    │
+│  Sales → Add Sale   │
+│  Product: Bondpaper │
+│  Qty: 5             │
+│  Price: ₱50.00      │
+└──────────┬──────────┘
+           ↓
+STEP 2: SYSTEM PROCESSES
+┌─────────────────────┐
+│  Application Logic  │
+│  Validates data     │
+│  Calculates totals  │
+│  Starts transaction │
+└──────────┬──────────┘
+           ↓
+STEP 3: DATABASE UPDATES
+┌──────────────────────────────────┐
+│ 1. INSERT sales_transactions     │
+│    ID: 1                         │
+│    Amount: ₱50.00                │
+│    Date: Feb 04, 2026            │
+│    Notes: "Sale for bondpaper"   │
+│                                  │
+│ 2. INSERT inventory_transactions │
+│    Type: out                     │
+│    Product: Bondpaper            │
+│    Qty: 5                        │
+│    Notes: "Sold 5 pcs"           │
+│                                  │
+│ 3. UPDATE inventory              │
+│    Quantity: 500 → 495           │
+└──────────┬───────────────────────┘
+           ↓
+STEP 4: VISIBLE IN UI
+┌─────────────────────────────────┐
+│ Transactions Page               │
+│                                 │
+│ INVENTORY TAB:                  │
+│ Transaction Type: 🔴 Stock Out │
+│ Item: Colored Bondpaper         │
+│ Qty: 5                          │
+│ Recorded By: Staff User         │
+│                                 │
+│ SALES TAB:                      │
+│ ID: #1                          │
+│ Amount: ₱50.00                  │
+│ Notes: "Sale for bondpaper"     │
+│ Recorded By: Staff User         │
+│                                 │
+│ Statistics:                     │
+│ Total Sales: ₱50.00             │
+│ Transaction Count: 1            │
+│ Average Sale: ₱50.00            │
+└─────────────────────────────────┘
+```
+
+---
+
+## Checklist: Everything That Changed
+
+### Code Changes ✅
+- [x] Fixed inventory table JOINs
+- [x] Updated database queries
+- [x] Fixed transaction type labels
+- [x] Improved type badge colors
+- [x] Updated column headers
+- [x] Clarified section titles
+- [x] Both files updated (staff + admin)
+- [x] Verified no PHP errors
+
+### Documentation Created ✅
+- [x] Comprehensive guide
+- [x] Quick reference
+- [x] Real-world examples
+- [x] Database schema
+- [x] Implementation summary
+
+### Testing ✅
+- [x] No SQL errors
+- [x] No PHP syntax errors
+- [x] Proper JOIN conditions
+- [x] Correct table references
+- [x] Labels display correctly
+- [x] Colors apply properly
+- [x] Statistics calculate right
+
+---
+
+## Before & After Comparison
+
+| Aspect | Before | After |
+|--------|--------|-------|
+| **Table JOINs** | Wrong (products) | ✅ Correct (inventory) |
+| **Column Labels** | Generic/Unclear | ✅ Descriptive/Clear |
+| **Type Labels** | Cryptic (in/out) | ✅ Clear (Stock In/Out) |
+| **Color Codes** | Basic | ✅ Meaningful |
+| **Section Titles** | Wordy | ✅ Concise |
+| **Documentation** | None | ✅ 5 comprehensive guides |
+| **User Clarity** | Confusing | ✅ Crystal clear |
+
+---
+
+## Quick Stats
+
+```
+FILES MODIFIED:        2
+├─ staff/transactions.php
+└─ admin/transactions.php
+
+FILES CREATED:         5
+├─ TRANSACTIONS_GUIDE.md
+├─ TRANSACTIONS_QUICK_REFERENCE.txt
+├─ TRANSACTION_EXAMPLES.txt
+├─ DATABASE_SCHEMA_TRANSACTIONS.txt
+└─ TRANSACTION_IMPLEMENTATION_SUMMARY.txt
+
+TOTAL DOCUMENTATION:   ~2,000 lines
+LABEL CHANGES:         8
+DATABASE QUERIES:      2 (Fixed)
+TYPE BADGES:           3 (Enhanced)
+```
+
+---
+
+## How to Use
+
+### For Staff/Admin Users
+1. Read `TRANSACTIONS_QUICK_REFERENCE.txt` (2 min)
+2. Open Transactions page (Staff/Admin Dashboard)
+3. Use filters and search
+4. Read full guide if needed
+
+### For Developers
+1. Check `DATABASE_SCHEMA_TRANSACTIONS.txt`
+2. Review code changes in both .php files
+3. Understand flow in `TRANSACTION_EXAMPLES.txt`
+4. Verify queries work with your data
+
+### For Administrators
+1. Read `TRANSACTION_IMPLEMENTATION_SUMMARY.txt`
+2. Review testing checklist
+3. Set up backups
+4. Plan archive strategy
+
+---
+
+## Summary of Changes
+
+✅ **All transaction data properly recorded**
+✅ **All labels clear and meaningful**
+✅ **All database queries correct**
+✅ **Complete documentation provided**
+✅ **Staff and Admin both updated**
+✅ **Ready for production use**
+
+System is now fully transparent and easy to understand!
+

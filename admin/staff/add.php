@@ -150,11 +150,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                             <div>
                                 <label class="block text-sm font-semibold mb-2">Password</label>
-                                <input type="password" name="password" value="flordeliz123" class="w-full border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-amber-500">
+                                <div class="relative">
+                                    <input type="password" name="password" id="password" value="flordeliz123" class="w-full border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-amber-500">
+                                    <button type="button" onclick="togglePassword('password')" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-600 hover:text-gray-800">
+                                        <svg id="password-eye" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                        </svg>
+                                    </button>
+                                </div>
                             </div>
                             <div>
                                 <label class="block text-sm font-semibold mb-2">Confirm Password</label>
-                                <input type="password" name="confirm_password" value="flordeliz123" class="w-full border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-amber-500">
+                                <div class="relative">
+                                    <input type="password" name="confirm_password" id="confirm_password" value="flordeliz123" class="w-full border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-amber-500">
+                                    <button type="button" onclick="togglePassword('confirm_password')" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-600 hover:text-gray-800">
+                                        <svg id="confirm_password-eye" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                        </svg>
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
@@ -187,6 +203,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 setTimeout(function(){ el.remove(); }, 500);
             }, 3000);
         });
+
+        // Toggle password visibility
+        function togglePassword(fieldId) {
+            const field = document.getElementById(fieldId);
+            const eye = document.getElementById(fieldId + '-eye');
+            
+            if (field.type === 'password') {
+                field.type = 'text';
+                eye.classList.add('opacity-60');
+            } else {
+                field.type = 'password';
+                eye.classList.remove('opacity-60');
+            }
+        }
     </script>
 </body>
 </html>

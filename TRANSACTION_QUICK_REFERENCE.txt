@@ -1,0 +1,320 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║          FLOR DE LIZ TRANSACTION SYSTEM - QUICK REFERENCE GUIDE              ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+🎯 SYSTEM OVERVIEW
+───────────────────────────────────────────────────────────────────────────────
+The transaction system automatically records ALL inventory and sales activities
+in the database. Every transaction is timestamped and attributed to the staff
+member who recorded it.
+
+📊 TWO MAIN TRANSACTION TYPES
+───────────────────────────────────────────────────────────────────────────────
+
+1️⃣ INVENTORY TRANSACTIONS (inventory_transactions table)
+   Purpose: Track movement of products and materials
+   
+   Types:
+   • IN        - Stock received from suppliers
+   • OUT       - Items sold to customers
+   • ADJUSTMENT - Corrections for damage, loss, or discrepancies
+   
+   Records:
+   ├─ What: Product/Material name
+   ├─ How Much: Quantity affected
+   ├─ Why: Notes explaining the transaction
+   ├─ Who: Staff member (created_by)
+   ├─ When: Date and time (created_at)
+   └─ Link: To products or inventory_materials
+
+2️⃣ SALES TRANSACTIONS (sales_transactions table)
+   Purpose: Record all money coming in from sales
+   
+   Records:
+   ├─ Amount: Total sales value
+   ├─ Date: When the sale occurred
+   ├─ Notes: Order details
+   ├─ Who: Staff member who recorded it
+   ├─ When: Date and time recorded
+   └─ Link: To orders (if applicable)
+
+
+🔄 HOW DATA FLOWS IN THE SYSTEM
+───────────────────────────────────────────────────────────────────────────────
+
+WHEN ITEMS ARE RECEIVED (Stock In):
+  1. Staff goes to: Staff > Inventory > Add Item
+  2. Enters product, quantity, supplier details
+  3. Clicks Submit
+  4. ✅ System creates:
+     - Inventory transaction (Type: IN)
+     - Updates product quantity
+     - Records who did it and when
+
+
+WHEN ITEMS ARE SOLD (Stock Out):
+  1. Staff goes to: Staff > Sales > Create Sale
+  2. Selects items and quantities
+  3. Clicks Submit
+  4. ✅ System creates:
+     - Sale record (sales table)
+     - Sale items (sale_items table) 
+     - Inventory 'OUT' transaction for each item
+     - Sales transaction with total amount
+     - Updates inventory quantities
+     - Records staff member and timestamps
+
+
+WHEN INVENTORY NEEDS CORRECTING (Adjustment):
+  1. Staff records wrong quantity or damage
+  2. Staff goes to: Staff > Inventory > Add Transaction
+  3. Selects "Adjustment" type
+  4. Enters quantity (negative for reductions)
+  5. ✅ System creates:
+     - Inventory transaction (Type: ADJUSTMENT)
+     - Records reason in notes
+     - Updates quantity
+
+
+📱 VIEWING TRANSACTIONS
+───────────────────────────────────────────────────────────────────────────────
+
+FOR STAFF:
+  Path: Dashboard > Transactions
+  
+  Shows:
+  ✓ All inventory transactions (In/Out/Adjustments)
+  ✓ All sales transactions
+  ✓ Statistics dashboard
+  ✓ Search & filter capabilities
+  ✓ Tab navigation (Inventory vs Sales)
+  
+  Color: TEAL theme
+
+
+FOR ADMIN:
+  Path: Dashboard > Transactions
+  
+  Shows:
+  ✓ Complete audit trail of ALL transactions
+  ✓ All staff member activities
+  ✓ Full reporting & analytics
+  ✓ Search & filter by date, type, staff, amount
+  ✓ Revenue statistics
+  
+  Color: AMBER theme
+
+
+🔎 SEARCHING TRANSACTIONS
+───────────────────────────────────────────────────────────────────────────────
+
+In the Transactions page:
+
+By Type:
+  • Click "Inventory Transactions" tab for stock movements
+  • Click "Sales Transactions" tab for revenue records
+
+By Search:
+  • Type in search box: automatically filters as you type
+  • Search by: date, product name, customer, amount
+
+For Inventory:
+  • Use dropdown to filter by: In / Out / Adjustment only
+
+
+📈 SAMPLE DATA IN SYSTEM
+───────────────────────────────────────────────────────────────────────────────
+
+INVENTORY TRANSACTIONS (7 records):
+  ├─ IN:  50 Hardbound Books (from supplier)
+  ├─ OUT: 25 Softbound Books (to customer)
+  ├─ IN:  10 Carbonless Paper (new material)
+  ├─ ADJUSTMENT: -5 Receipts (damaged units)
+  ├─ OUT: 15 Hardbound Books (bulk order)
+  ├─ OUT: 100 Colored Bondpaper (printing job)
+  └─ IN:  20 Receipt Pads (restock)
+
+SALES RECORDS (4 sales):
+  ├─ Feb 1: ₱5,250.00
+  ├─ Feb 2: ₱3,500.00
+  ├─ Feb 3: ₱8,750.00
+  └─ Feb 4: ₱4,200.00
+
+SALES TRANSACTIONS (5 records):
+  ├─ Feb 1: ₱5,250.00 (Hardbound books bulk)
+  ├─ Feb 2: ₱3,500.00 (Softbound & receipts)
+  ├─ Feb 3: ₱8,750.00 (Mixed products)
+  ├─ Feb 4: ₱4,200.00 (Sari-sari store)
+  └─ Feb 4: ₱2,800.00 (Printing materials)
+
+TOTAL REVENUE: ₱24,500.00
+
+
+🗄️ DATABASE TABLES
+───────────────────────────────────────────────────────────────────────────────
+
+inventory_transactions:
+  id ..................... Primary key (unique ID)
+  product_id ............. Link to products table
+  material_id ............ Link to materials table
+  transaction_type ....... 'in', 'out', or 'adjustment'
+  quantity ............... Units affected
+  notes .................. Reason/details
+  created_by ............. User ID who recorded it
+  created_at ............. Timestamp when recorded
+
+sales_transactions:
+  id ..................... Primary key (unique ID)
+  order_id ............... Link to orders table
+  transaction_date ....... Date of sale
+  total_sales ............ Amount earned (₱)
+  notes .................. Order details
+  created_by ............. User ID who recorded it
+  created_at ............. Timestamp when recorded
+
+sales:
+  id ..................... Primary key
+  sale_date .............. When sale occurred
+  total_amount ........... Total value
+  created_at ............. When recorded
+
+sale_items:
+  id ..................... Primary key
+  sale_id ................ Link to sales table
+  inventory_id ........... Product sold
+  quantity ............... How many units
+  unit_price ............. Price per unit
+  subtotal ............... Total for this item
+
+
+✅ KEY FEATURES
+───────────────────────────────────────────────────────────────────────────────
+
+✓ AUTOMATIC RECORDING
+  Every transaction is timestamped and recorded immediately
+
+✓ FULL AUDIT TRAIL
+  See who created each transaction and when
+
+✓ DATA INTEGRITY
+  Transactions link to actual products and staff members
+
+✓ REAL-TIME TRACKING
+  Inventory updates instantly when sales are made
+
+✓ SEARCH & FILTER
+  Find any transaction in seconds
+
+✓ STATISTICS
+  See totals, counts, and revenue at a glance
+
+✓ NO DELETION
+  Transactions cannot be deleted (maintains audit trail)
+
+✓ DETAILED NOTES
+  Every transaction has explanatory notes
+
+
+🎯 BEST PRACTICES
+───────────────────────────────────────────────────────────────────────────────
+
+1. ALWAYS ADD DETAILED NOTES
+   Explain WHY the transaction happened
+   Examples:
+   • "Received from Star Paper Corporation"
+   • "Sold to Smith Motor Trade customer"
+   • "Damaged during handling - removed from stock"
+   • "Printing job for Company XYZ"
+
+2. RECORD IMMEDIATELY
+   Don't wait - record transactions as they happen
+   Ensures accurate real-time inventory
+
+3. USE CORRECT TYPES
+   • IN for received items
+   • OUT for sold items
+   • ADJUSTMENT for corrections
+
+4. VERIFY OFTEN
+   Use the Transactions page to check accuracy
+
+5. REVIEW REPORTS
+   Check statistics weekly for trends
+
+
+🚀 QUICK NAVIGATION
+───────────────────────────────────────────────────────────────────────────────
+
+View Staff Transactions:
+  → Staff Dashboard > Transactions
+  
+View Admin Transactions:
+  → Admin Dashboard > Transactions
+
+Create New Sale (auto-creates OUT transactions):
+  → Staff > Sales > Create Sale
+
+Add Inventory Item (creates IN transaction):
+  → Staff > Inventory > Add Item
+
+Verify All Data:
+  → Go to: verify_transaction_data.php
+
+Read Full Guide:
+  → Go to: view_sample_transactions_guide.php
+
+
+📞 QUICK ANSWERS
+───────────────────────────────────────────────────────────────────────────────
+
+Q: When are transactions recorded?
+A: Immediately when created. Staff records, system timestamps it.
+
+Q: Who can see transactions?
+A: Staff sees their own in transactions page. Admin sees all.
+
+Q: Can transactions be deleted?
+A: No - they're permanent for audit trail purposes.
+
+Q: How do I create a sales transaction?
+A: Go to Staff > Sales > Create - it's automatic when you submit.
+
+Q: How do I know what sold?
+A: Look at the Sales Transactions page for revenue records.
+
+Q: How do I track inventory movement?
+A: Look at Inventory Transactions page with type filters.
+
+Q: Are transactions backed up?
+A: Yes - they're in the MySQL database with automatic backups.
+
+Q: Can I export transactions?
+A: You can see them on screen, copy from table, or generate reports.
+
+
+📊 SAMPLE DATA ACCESS
+───────────────────────────────────────────────────────────────────────────────
+
+Direct URLs to see data:
+
+View All Verified Data:
+  http://localhost/flordeliz/verify_transaction_data.php
+
+Complete System Guide:
+  http://localhost/flordeliz/view_sample_transactions_guide.php
+
+Staff Transactions:
+  http://localhost/flordeliz/staff/transactions.php
+
+Admin Transactions:
+  http://localhost/flordeliz/admin/transactions.php
+
+
+═══════════════════════════════════════════════════════════════════════════════
+
+Last Updated: February 4, 2026
+Version: 1.0
+System: Flor de Liz Business Management
+Database: MySQL / MariaDB
+
+═══════════════════════════════════════════════════════════════════════════════

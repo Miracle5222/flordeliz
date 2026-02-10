@@ -1,0 +1,5 @@
+# Local config and secret keys
+config/semaphore_key.local
+
+# SMS logs
+sms_log.txt

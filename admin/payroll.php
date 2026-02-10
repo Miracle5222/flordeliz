@@ -101,6 +101,7 @@ if ($result) {
                                 </td>
                                 <td class="py-2 space-x-2">
                                     <a href="payroll/view.php?id=<?php echo $p['id']; ?>" class="text-blue-600 hover:underline text-sm">View</a>
+                                    <a href="payroll/slip.php?id=<?php echo $p['id']; ?>" class="text-purple-600 hover:underline text-sm">Slip</a>
                                     <a href="payroll/edit.php?id=<?php echo $p['id']; ?>" class="text-amber-600 hover:underline text-sm">Edit</a>
                                 </td>
                             </tr>

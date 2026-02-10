@@ -103,8 +103,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 $it->close();
 
+                // Record sales transaction
+                $sales_trans = $conn->prepare('INSERT INTO sales_transactions (transaction_date, total_sales, notes, created_by) VALUES (?, ?, ?, ?)');
+                if (!$sales_trans) throw new Exception('Prepare failed (sales_transactions): ' . $conn->error);
+                $sale_date_only = date('Y-m-d', strtotime($sale_date));
+                $notes = "Sale recorded for " . $product_label;
+                $created_by = $_SESSION['user_id'] ?? null;
+                if (!$sales_trans->bind_param('sdsi', $sale_date_only, $subtotal, $notes, $created_by)) throw new Exception('Bind failed (sales_transactions): ' . $sales_trans->error);
+                if (!$sales_trans->execute()) throw new Exception('Execute failed (sales_transactions): ' . $sales_trans->error);
+                $sales_trans->close();
+
                 // update inventory quantity only when not "others"
                 if (!$is_other) {
+                    // Record inventory transaction for 'out'
+                    $inv_trans = $conn->prepare('INSERT INTO inventory_transactions (product_id, transaction_type, quantity, notes, created_by) VALUES (?, ?, ?, ?, ?)');
+                    if (!$inv_trans) throw new Exception('Prepare failed (inventory_transactions): ' . $conn->error);
+                    $trans_type = 'out';
+                    $inv_notes = "Sold " . $quantity . " " . $unit_val . " of " . $product_label;
+                    if (!$inv_trans->bind_param('isisi', $inventory_id, $trans_type, $quantity, $inv_notes, $created_by)) throw new Exception('Bind failed (inventory_transactions): ' . $inv_trans->error);
+                    if (!$inv_trans->execute()) throw new Exception('Execute failed (inventory_transactions): ' . $inv_trans->error);
+                    $inv_trans->close();
+
                     // subtract quantity but don't let inventory go below zero
                     $up = $conn->prepare('UPDATE inventory SET quantity = GREATEST(quantity - ?, 0) WHERE id = ?');
                     if (!$up) throw new Exception('Prepare failed (inventory update): ' . $conn->error);
